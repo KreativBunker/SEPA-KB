@@ -1,0 +1,165 @@
+[2026-01-08 16:14:04] Unhandled exception
+PDOException: DB config fehlt
+/usr/www/users/kbipro/sepa/app/Services/Db.php:28
+#0 /usr/www/users/kbipro/sepa/app/Repositories/UserRepository.php(13): App\Services\Db::pdo()
+#1 /usr/www/users/kbipro/sepa/app/Controllers/AuthController.php(47): App\Repositories\UserRepository->findByEmail()
+#2 /usr/www/users/kbipro/sepa/app/Support/Router.php(55): App\Controllers\AuthController->login()
+#3 /usr/www/users/kbipro/sepa/public/index.php(47): App\Support\Router->dispatch()
+#4 {main}
+
+[2026-01-08 16:14:14] Unhandled exception
+PDOException: DB config fehlt
+/usr/www/users/kbipro/sepa/app/Services/Db.php:28
+#0 /usr/www/users/kbipro/sepa/app/Repositories/UserRepository.php(13): App\Services\Db::pdo()
+#1 /usr/www/users/kbipro/sepa/app/Controllers/AuthController.php(47): App\Repositories\UserRepository->findByEmail()
+#2 /usr/www/users/kbipro/sepa/app/Support/Router.php(55): App\Controllers\AuthController->login()
+#3 /usr/www/users/kbipro/sepa/public/index.php(47): App\Support\Router->dispatch()
+#4 {main}
+
+[2026-01-08 16:15:07] Unhandled exception
+PDOException: DB config fehlt
+/usr/www/users/kbipro/sepa/app/Services/Db.php:28
+#0 /usr/www/users/kbipro/sepa/app/Repositories/UserRepository.php(13): App\Services\Db::pdo()
+#1 /usr/www/users/kbipro/sepa/app/Controllers/AuthController.php(47): App\Repositories\UserRepository->findByEmail()
+#2 /usr/www/users/kbipro/sepa/app/Support/Router.php(55): App\Controllers\AuthController->login()
+#3 /usr/www/users/kbipro/sepa/public/index.php(47): App\Support\Router->dispatch()
+#4 {main}
+
+[2026-01-08 18:09:04] Unhandled exception
+ParseError: syntax error, unexpected token "catch", expecting "function"
+/usr/www/users/kbipro/sepa/app/Controllers/ExportsController.php:290
+#0 /usr/www/users/kbipro/sepa/app/Support/Router.php(54): {closure:/usr/www/users/kbipro/sepa/vendor/autoload.php:5}()
+#1 /usr/www/users/kbipro/sepa/public/index.php(47): App\Support\Router->dispatch()
+#2 {main}
+
+[2026-01-08 18:09:05] Unhandled exception
+ParseError: syntax error, unexpected token "catch", expecting "function"
+/usr/www/users/kbipro/sepa/app/Controllers/ExportsController.php:290
+#0 /usr/www/users/kbipro/sepa/app/Support/Router.php(54): {closure:/usr/www/users/kbipro/sepa/vendor/autoload.php:5}()
+#1 /usr/www/users/kbipro/sepa/public/index.php(47): App\Support\Router->dispatch()
+#2 {main}
+
+[2026-01-08 18:09:12] Unhandled exception
+ParseError: syntax error, unexpected token "catch", expecting "function"
+/usr/www/users/kbipro/sepa/app/Controllers/ExportsController.php:290
+#0 /usr/www/users/kbipro/sepa/app/Support/Router.php(54): {closure:/usr/www/users/kbipro/sepa/vendor/autoload.php:5}()
+#1 /usr/www/users/kbipro/sepa/public/index.php(47): App\Support\Router->dispatch()
+#2 {main}
+
+[2026-01-09 11:20:17] Unhandled exception
+ParseError: syntax error, unexpected variable "$given", expecting "function"
+/usr/www/users/kbipro/sepa/app/Controllers/InvoicesController.php:310
+#0 /usr/www/users/kbipro/sepa/app/Support/Router.php(54): {closure:/usr/www/users/kbipro/sepa/vendor/autoload.php:5}()
+#1 /usr/www/users/kbipro/sepa/public/index.php(47): App\Support\Router->dispatch()
+#2 {main}
+
+[2026-01-09 12:31:04] Unhandled exception
+ParseError: syntax error, unexpected variable "$name", expecting "function"
+/usr/www/users/kbipro/sepa/app/Controllers/InvoicesController.php:353
+#0 /usr/www/users/kbipro/sepa/app/Support/Router.php(54): {closure:/usr/www/users/kbipro/sepa/vendor/autoload.php:5}()
+#1 /usr/www/users/kbipro/sepa/public/index.php(47): App\Support\Router->dispatch()
+#2 {main}
+
+[2026-01-09 14:16:11] Unhandled exception
+PDOException: SQLSTATE[01000]: Warning: 1265 Data truncated for column 'pain_version' at row 1
+/usr/www/users/kbipro/sepa/app/Repositories/ExportRunRepository.php:33
+#0 /usr/www/users/kbipro/sepa/app/Repositories/ExportRunRepository.php(33): PDOStatement->execute()
+#1 /usr/www/users/kbipro/sepa/app/Controllers/ExportsController.php(73): App\Repositories\ExportRunRepository->create()
+#2 /usr/www/users/kbipro/sepa/app/Support/Router.php(55): App\Controllers\ExportsController->store()
+#3 /usr/www/users/kbipro/sepa/public/index.php(47): App\Support\Router->dispatch()
+#4 {main}
+
+[2026-01-09 14:16:44] Unhandled exception
+PDOException: SQLSTATE[01000]: Warning: 1265 Data truncated for column 'pain_version' at row 1
+/usr/www/users/kbipro/sepa/app/Repositories/ExportRunRepository.php:33
+#0 /usr/www/users/kbipro/sepa/app/Repositories/ExportRunRepository.php(33): PDOStatement->execute()
+#1 /usr/www/users/kbipro/sepa/app/Controllers/ExportsController.php(73): App\Repositories\ExportRunRepository->create()
+#2 /usr/www/users/kbipro/sepa/app/Support/Router.php(55): App\Controllers\ExportsController->store()
+#3 /usr/www/users/kbipro/sepa/public/index.php(47): App\Support\Router->dispatch()
+#4 {main}
+
+[2026-01-09 15:08:45] Unhandled exception
+ParseError: syntax error, unexpected token "public"
+/usr/www/users/kbipro/sepa/app/Services/SevdeskClient.php:124
+#0 /usr/www/users/kbipro/sepa/app/Controllers/ExportsController.php(91): {closure:/usr/www/users/kbipro/sepa/vendor/autoload.php:5}()
+#1 /usr/www/users/kbipro/sepa/app/Support/Router.php(55): App\Controllers\ExportsController->store()
+#2 /usr/www/users/kbipro/sepa/public/index.php(47): App\Support\Router->dispatch()
+#3 {main}
+
+[2026-01-09 15:32:35] Unhandled exception
+PDOException: SQLSTATE[01000]: Warning: 1265 Data truncated for column 'status' at row 1
+/usr/www/users/kbipro/sepa/app/Repositories/ExportItemRepository.php:45
+#0 /usr/www/users/kbipro/sepa/app/Repositories/ExportItemRepository.php(45): PDOStatement->execute()
+#1 /usr/www/users/kbipro/sepa/app/Controllers/ExportsController.php(363): App\Repositories\ExportItemRepository->markCompletedForRun()
+#2 /usr/www/users/kbipro/sepa/app/Support/Router.php(55): App\Controllers\ExportsController->finalize()
+#3 /usr/www/users/kbipro/sepa/public/index.php(47): App\Support\Router->dispatch()
+#4 {main}
+
+[2026-01-09 16:09:34] Unhandled exception
+ParseError: syntax error, unexpected token "(", expecting ";" or "{"
+/usr/www/users/kbipro/sepa/app/Controllers/InvoicesController.php:412
+#0 /usr/www/users/kbipro/sepa/app/Support/Router.php(54): {closure:/usr/www/users/kbipro/sepa/vendor/autoload.php:5}()
+#1 /usr/www/users/kbipro/sepa/public/index.php(47): App\Support\Router->dispatch()
+#2 {main}
+
+[2026-01-09 16:09:35] Unhandled exception
+ParseError: syntax error, unexpected token "(", expecting ";" or "{"
+/usr/www/users/kbipro/sepa/app/Controllers/InvoicesController.php:412
+#0 /usr/www/users/kbipro/sepa/app/Support/Router.php(54): {closure:/usr/www/users/kbipro/sepa/vendor/autoload.php:5}()
+#1 /usr/www/users/kbipro/sepa/public/index.php(47): App\Support\Router->dispatch()
+#2 {main}
+
+[2026-01-09 16:09:40] Unhandled exception
+ParseError: syntax error, unexpected token "(", expecting ";" or "{"
+/usr/www/users/kbipro/sepa/app/Controllers/InvoicesController.php:412
+#0 /usr/www/users/kbipro/sepa/app/Support/Router.php(54): {closure:/usr/www/users/kbipro/sepa/vendor/autoload.php:5}()
+#1 /usr/www/users/kbipro/sepa/public/index.php(47): App\Support\Router->dispatch()
+#2 {main}
+
+[2026-01-13 14:11:45] Unhandled exception
+ParseError: syntax error, unexpected variable "$file", expecting "function"
+/usr/www/users/kbipro/sepa/app/Controllers/OnlineMandatesController.php:306
+#0 /usr/www/users/kbipro/sepa/app/Support/Router.php(54): {closure:/usr/www/users/kbipro/sepa/vendor/autoload.php:5}()
+#1 /usr/www/users/kbipro/sepa/public/index.php(47): App\Support\Router->dispatch()
+#2 {main}
+
+[2026-01-13 14:11:46] Unhandled exception
+ParseError: syntax error, unexpected variable "$file", expecting "function"
+/usr/www/users/kbipro/sepa/app/Controllers/OnlineMandatesController.php:306
+#0 /usr/www/users/kbipro/sepa/app/Support/Router.php(54): {closure:/usr/www/users/kbipro/sepa/vendor/autoload.php:5}()
+#1 /usr/www/users/kbipro/sepa/public/index.php(47): App\Support\Router->dispatch()
+#2 {main}
+
+[2026-01-13 14:21:19] Unhandled exception
+ParseError: syntax error, unexpected variable "$file", expecting "function"
+/usr/www/users/kbipro/sepa/app/Controllers/PublicMandateController.php:271
+#0 /usr/www/users/kbipro/sepa/app/Support/Router.php(54): {closure:/usr/www/users/kbipro/sepa/vendor/autoload.php:5}()
+#1 /usr/www/users/kbipro/sepa/public/index.php(47): App\Support\Router->dispatch()
+#2 {main}
+
+[2026-01-13 15:00:09] PDF Erstellung fehlgeschlagen
+ParseError: syntax error, unexpected variable "$enc", expecting "function"
+/usr/www/users/kbipro/sepa/app/Services/SimplePdf.php:47
+#0 /usr/www/users/kbipro/sepa/app/Controllers/PublicMandateController.php(115): {closure:/usr/www/users/kbipro/sepa/vendor/autoload.php:5}()
+#1 /usr/www/users/kbipro/sepa/app/Support/Router.php(55): App\Controllers\PublicMandateController->sign()
+#2 /usr/www/users/kbipro/sepa/public/index.php(47): App\Support\Router->dispatch()
+#3 {main}
+
+[2026-01-13 17:26:09] PDF Erstellung fehlgeschlagen
+ParseError: syntax error, unexpected variable "$enc", expecting "function"
+/usr/www/users/kbipro/sepa/app/Services/SimplePdf.php:47
+#0 /usr/www/users/kbipro/sepa/app/Controllers/PublicMandateController.php(117): {closure:/usr/www/users/kbipro/sepa/vendor/autoload.php:5}()
+#1 /usr/www/users/kbipro/sepa/app/Support/Router.php(55): App\Controllers\PublicMandateController->sign()
+#2 /usr/www/users/kbipro/sepa/public/index.php(47): App\Support\Router->dispatch()
+#3 {main}
+
+[2026-01-13 18:04:32] Unhandled exception
+PDOException: SQLSTATE[HY093]: Invalid parameter number: number of bound variables does not match number of tokens
+/usr/www/users/kbipro/sepa/app/Repositories/MandateRepository.php:70
+#0 /usr/www/users/kbipro/sepa/app/Repositories/MandateRepository.php(70): PDOStatement->execute()
+#1 /usr/www/users/kbipro/sepa/app/Repositories/MandateRepository.php(78): App\Repositories\MandateRepository->update()
+#2 /usr/www/users/kbipro/sepa/app/Controllers/PublicMandateController.php(155): App\Repositories\MandateRepository->upsertByContactId()
+#3 /usr/www/users/kbipro/sepa/app/Support/Router.php(55): App\Controllers\PublicMandateController->sign()
+#4 /usr/www/users/kbipro/sepa/public/index.php(47): App\Support\Router->dispatch()
+#5 {main}
+
