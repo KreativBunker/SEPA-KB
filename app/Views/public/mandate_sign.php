@@ -1,6 +1,8 @@
 <?php
 use App\Support\App;
 use App\Support\Flash;
+
+$old = $old ?? [];
 ?>
 <div class="card">
   <h1 style="margin-top:0;">SEPA Mandat online ausfüllen</h1>
@@ -22,39 +24,39 @@ use App\Support\Flash;
     <div class="grid" style="margin-top: 12px;">
       <div>
         <label>Name Kontoinhaber</label>
-        <input type="text" name="debtor_name" required>
+        <input type="text" name="debtor_name" required value="<?php echo htmlspecialchars((string)($old['debtor_name'] ?? '')); ?>">
       </div>
       <div>
         <label>Straße und Hausnummer</label>
-        <input type="text" name="debtor_street" required>
+        <input type="text" name="debtor_street" required value="<?php echo htmlspecialchars((string)($old['debtor_street'] ?? '')); ?>">
       </div>
       <div>
         <label>PLZ</label>
-        <input type="text" name="debtor_zip" required>
+        <input type="text" name="debtor_zip" required value="<?php echo htmlspecialchars((string)($old['debtor_zip'] ?? '')); ?>">
       </div>
       <div>
         <label>Ort</label>
-        <input type="text" name="debtor_city" required>
+        <input type="text" name="debtor_city" required value="<?php echo htmlspecialchars((string)($old['debtor_city'] ?? '')); ?>">
       </div>
       <div>
         <label>Land</label>
-        <input type="text" name="debtor_country" value="DE" maxlength="2">
+        <input type="text" name="debtor_country" value="<?php echo htmlspecialchars((string)($old['debtor_country'] ?? 'DE')); ?>" maxlength="2">
       </div>
       <div>
         <label>IBAN</label>
-        <input type="text" name="debtor_iban" required placeholder="DE..">
+        <input type="text" id="iban" name="debtor_iban" required placeholder="DE92 3202 ..." value="<?php echo htmlspecialchars((string)($old['debtor_iban'] ?? '')); ?>">
       </div>
       <div>
         <label>BIC optional</label>
-        <input type="text" name="debtor_bic" placeholder="">
+        <input type="text" name="debtor_bic" placeholder="" value="<?php echo htmlspecialchars((string)($old['debtor_bic'] ?? '')); ?>">
       </div>
       <div>
         <label>Ort der Unterschrift</label>
-        <input type="text" name="signed_place" required>
+        <input type="text" name="signed_place" required value="<?php echo htmlspecialchars((string)($old['signed_place'] ?? '')); ?>">
       </div>
       <div>
         <label>Datum</label>
-        <input type="date" name="signed_date" value="<?php echo htmlspecialchars(date('Y-m-d')); ?>" required>
+        <input type="date" name="signed_date" value="<?php echo htmlspecialchars((string)($old['signed_date'] ?? date('Y-m-d'))); ?>" required>
       </div>
     </div>
 
@@ -160,4 +162,27 @@ function submitSignature() {
   document.getElementById('signature_data').value = dataUrl;
   return true;
 }
+
+function formatIbanValue(v) {
+  if (!v) return '';
+  let s = v.toString().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  // Group in 4s: DE92 3202 ...
+  return s.replace(/(.{4})/g, '$1 ').trim();
+}
+
+const ibanInput = document.getElementById('iban');
+if (ibanInput) {
+  ibanInput.addEventListener('input', function() {
+    const old = ibanInput.value;
+    const formatted = formatIbanValue(old);
+    ibanInput.value = formatted;
+  });
+  ibanInput.addEventListener('blur', function() {
+    ibanInput.value = formatIbanValue(ibanInput.value);
+  });
+
+  // Initial formatting if value is prefilled
+  ibanInput.value = formatIbanValue(ibanInput.value);
+}
+
 </script>

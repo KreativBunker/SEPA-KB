@@ -37,6 +37,7 @@ final class PublicMandateController
             'item' => $item,
             'settings' => $settings,
             'csrf' => Csrf::token(),
+            'old' => $this->getOld($token),
         ]);
     }
 
@@ -58,10 +59,26 @@ final class PublicMandateController
         $debtorCity = trim((string)($_POST['debtor_city'] ?? ''));
         $debtorCountry = strtoupper(trim((string)($_POST['debtor_country'] ?? 'DE')));
         $debtorIban = strtoupper(trim((string)($_POST['debtor_iban'] ?? '')));
+        $debtorIban = preg_replace('/[^A-Z0-9]/', '', $debtorIban) ?: '';
         $debtorBic = strtoupper(trim((string)($_POST['debtor_bic'] ?? '')));
+        $debtorBic = preg_replace('/[^A-Z0-9]/', '', $debtorBic) ?: '';
         $signedPlace = trim((string)($_POST['signed_place'] ?? ''));
         $signedDate = trim((string)($_POST['signed_date'] ?? date('Y-m-d')));
         $signature = (string)($_POST['signature_data'] ?? '');
+
+        // Keep entered values when validation fails
+        $this->setOld($token, [
+            'debtor_name' => $debtorName,
+            'debtor_street' => $debtorStreet,
+            'debtor_zip' => $debtorZip,
+            'debtor_city' => $debtorCity,
+            'debtor_country' => $debtorCountry,
+            'debtor_iban' => $this->formatIbanDisplay($debtorIban),
+            'debtor_bic' => $debtorBic,
+            'signed_place' => $signedPlace,
+            'signed_date' => $signedDate,
+        ]);
+
 
         if ($debtorName === '' || $debtorStreet === '' || $debtorZip === '' || $debtorCity === '' || $debtorIban === '' || $signedPlace === '' || $signedDate === '') {
             Flash::add('error', 'Bitte alle Pflichtfelder ausfüllen.');
@@ -179,6 +196,7 @@ final class PublicMandateController
 
 
         Flash::add('success', 'Mandat wurde gespeichert.');
+        $this->clearOld($token);
         header('Location: ' . App::url('/m/' . $token . '/done'));
         exit;
     }
@@ -264,10 +282,43 @@ final class PublicMandateController
         }
 
         header('Content-Type: application/pdf');
-        header('Content-Disposition: attachment; filename="SEPA_Mandat_' . (string)($item['mandate_reference'] ?? 'mandat') . '.pdf"');
+        header('Content-Disposition: attachment; filename="SEPA_Mandat_" . (string)($item['mandate_reference'] ?? 'mandat') . ".pdf"');
         header('Content-Length: ' . filesize($pdfFile));
         readfile($pdfFile);
     }
 
+
+
+    private function getOld(string $token): array
+    {
+        if (!isset($_SESSION['public_mandate_old']) || !is_array($_SESSION['public_mandate_old'])) {
+            return [];
+        }
+        return (array)($_SESSION['public_mandate_old'][$token] ?? []);
+    }
+
+    private function setOld(string $token, array $data): void
+    {
+        if (!isset($_SESSION['public_mandate_old']) || !is_array($_SESSION['public_mandate_old'])) {
+            $_SESSION['public_mandate_old'] = [];
+        }
+        $_SESSION['public_mandate_old'][$token] = $data;
+    }
+
+    private function clearOld(string $token): void
+    {
+        if (isset($_SESSION['public_mandate_old'][$token])) {
+            unset($_SESSION['public_mandate_old'][$token]);
+        }
+    }
+
+    private function formatIbanDisplay(string $iban): string
+    {
+        $iban = preg_replace('/[^A-Z0-9]/', '', strtoupper($iban)) ?: '';
+        if ($iban === '') {
+            return '';
+        }
+        return trim(chunk_split($iban, 4, ' '));
+    }
 
 }
