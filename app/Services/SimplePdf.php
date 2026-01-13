@@ -57,7 +57,7 @@ final class SimplePdf
     private static function text(float $x, float $y, string $font, int $size, string $text): string
     {
         $t = self::esc($text);
-        return "BT /{$font} {$size} Tf {$x} {$y} Td ({$t}) Tj ET\n";
+        return "0 0 0 rg BT /{$font} {$size} Tf {$x} {$y} Td ({$t}) Tj ET\n";
     }
 
     private static function multiText(float $x, float $y, float $w, string $font, int $size, int $lineH, string $text): string
