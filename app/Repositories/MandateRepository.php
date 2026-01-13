@@ -44,7 +44,7 @@ final class MandateRepository
             VALUES
             (:sevdesk_contact_id,:debtor_name,:debtor_iban,:debtor_bic,:mandate_reference,:mandate_date,:scheme,:sequence_mode,:status,:notes,:attachment_path)';
         $st = $pdo->prepare($sql);
-        $st->execute($data);
+        $st->execute($this->normalizeData($data));
         return (int)$pdo->lastInsertId();
     }
 
@@ -65,6 +65,7 @@ final class MandateRepository
             attachment_path = :attachment_path,
             updated_at = NOW()
             WHERE id = :id';
+        $data = $this->normalizeData($data);
         $data['id'] = $id;
         $st = $pdo->prepare($sql);
         $st->execute($data);
@@ -104,6 +105,32 @@ public function setStatus(int $id, string $status): void
         $pdo = \App\Services\Db::pdo();
         $st = $pdo->prepare("DELETE FROM mandates WHERE id = :id");
         $st->execute([':id' => $id]);
+    }
+
+    private function normalizeData(array $data): array
+    {
+        $keys = [
+            'sevdesk_contact_id',
+            'debtor_name',
+            'debtor_iban',
+            'debtor_bic',
+            'mandate_reference',
+            'mandate_date',
+            'scheme',
+            'sequence_mode',
+            'status',
+            'notes',
+            'attachment_path',
+        ];
+
+        $normalized = array_intersect_key($data, array_flip($keys));
+        foreach ($keys as $key) {
+            if (!array_key_exists($key, $normalized)) {
+                $normalized[$key] = null;
+            }
+        }
+
+        return $normalized;
     }
 
 }
