@@ -83,6 +83,8 @@ const ctx = canvas.getContext('2d');
 ctx.lineWidth = 2;
 ctx.lineCap = 'round';
 ctx.strokeStyle = '#111827';
+ctx.fillStyle = '#ffffff';
+ctx.fillRect(0, 0, canvas.width, canvas.height);
 
 let drawing = false;
 let hasStroke = false;
@@ -129,6 +131,8 @@ canvas.addEventListener('touchcancel', end, {passive:false});
 
 function clearSig() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
   hasStroke = false;
 }
 
@@ -138,20 +142,20 @@ function submitSignature() {
     return false;
   }
 
+  // Create a white-backed export to avoid black backgrounds in JPEGs.
+  const tmp = document.createElement('canvas');
+  tmp.width = canvas.width;
+  tmp.height = canvas.height;
+  const tctx = tmp.getContext('2d');
+  tctx.fillStyle = '#ffffff';
+  tctx.fillRect(0, 0, tmp.width, tmp.height);
+  tctx.drawImage(canvas, 0, 0);
+
   // Try to get JPEG data (preferred, no server-side GD needed)
-  let dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+  let dataUrl = tmp.toDataURL('image/jpeg', 0.92);
 
-  // Some browsers may fallback to PNG. In that case, try again with a white background.
   if (!dataUrl.startsWith('data:image/jpeg;base64,')) {
-    const tmp = document.createElement('canvas');
-    tmp.width = canvas.width;
-    tmp.height = canvas.height;
-    const tctx = tmp.getContext('2d');
-    tctx.fillStyle = '#ffffff';
-    tctx.fillRect(0, 0, tmp.width, tmp.height);
-    tctx.drawImage(canvas, 0, 0);
-
-    dataUrl = tmp.toDataURL('image/jpeg', 0.92);
+    dataUrl = tmp.toDataURL('image/png');
   }
 
   if (!dataUrl.startsWith('data:image/jpeg;base64,') && !dataUrl.startsWith('data:image/png;base64,')) {
