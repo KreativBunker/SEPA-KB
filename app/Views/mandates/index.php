@@ -70,7 +70,7 @@ use App\Support\App;
           <td class="mono iban"><?php echo htmlspecialchars((string)($it['debtor_iban'] ?? '')); ?></td>
           <td class="mono bic"><?php echo htmlspecialchars((string)($it['debtor_bic'] ?? '')); ?></td>
           <td><?php echo htmlspecialchars((string)($it['mandate_reference'] ?? '')); ?></td>
-          <td><?php echo htmlspecialchars((string)($it['mandate_date'] ?? '')); ?></td>
+          <td><?php echo htmlspecialchars(\App\Support\DateFormatter::toDisplay((string)($it['mandate_date'] ?? ''))); ?></td>
           <td><span class="pill <?php echo $statusClass; ?>"><?php echo htmlspecialchars($statusLabel); ?></span></td>
           <td>
             <?php if ($hasPdf): ?>
@@ -123,7 +123,7 @@ use App\Support\App;
               <a href="<?php echo htmlspecialchars($publicUrl); ?>" target="_blank" rel="noopener">öffnen</a><br>
               <span class="muted" style="word-break: break-all;"><?php echo htmlspecialchars($publicUrl); ?></span>
             </td>
-            <td><?php echo htmlspecialchars((string)($ol['created_at'] ?? '')); ?></td>
+            <td><?php echo htmlspecialchars(\App\Support\DateFormatter::toDisplay((string)($ol['created_at'] ?? ''))); ?></td>
             <td>
               <form method="post" action="<?php echo App::url('/online-mandates/' . (int)$ol['id'] . '/revoke'); ?>" style="display:inline;">
                 <input type="hidden" name="_csrf" value="<?php echo htmlspecialchars((string)$csrf); ?>">

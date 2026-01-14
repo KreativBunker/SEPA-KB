@@ -66,7 +66,7 @@
             <td><?php echo htmlspecialchars($inv['contact_name']); ?></td>
             <td><?php echo htmlspecialchars((string)($inv['payment_method'] ?? '')); ?></td>
             <td><?php echo htmlspecialchars(number_format((float)$inv['sumGross'], 2, ',', '.')); ?> EUR</td>
-            <td><?php echo htmlspecialchars($inv['dueDate']); ?></td>
+            <td><?php echo htmlspecialchars(\App\Support\DateFormatter::toDisplay((string)$inv['dueDate'])); ?></td>
             <td>
               <?php if (!empty($inv['completed'])): ?>
                 <span class="pill ok">abgeschlossen</span>

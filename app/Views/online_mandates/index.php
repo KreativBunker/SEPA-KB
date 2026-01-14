@@ -40,8 +40,8 @@ use App\Support\App;
           <a href="<?php echo htmlspecialchars($publicUrl); ?>" target="_blank" rel="noopener">öffnen</a><br>
           <span class="muted" style="word-break: break-all;"><?php echo htmlspecialchars($publicUrl); ?></span>
         </td>
-        <td><?php echo htmlspecialchars((string)$it['created_at']); ?></td>
-        <td><?php echo htmlspecialchars((string)($it['signed_at'] ?? '')); ?></td>
+        <td><?php echo htmlspecialchars(\App\Support\DateFormatter::toDisplay((string)$it['created_at'])); ?></td>
+        <td><?php echo htmlspecialchars(\App\Support\DateFormatter::toDisplay((string)($it['signed_at'] ?? ''))); ?></td>
         <td>
           <a class="btn inline" href="<?php echo App::url('/online-mandates/' . (int)$it['id']); ?>">Details</a>
           <?php if (!empty($it['pdf_path']) && $st === 'signed'): ?>
