@@ -259,7 +259,9 @@ final class SimplePdf
         // Legal text
         $cmd .= self::text($mLeft + $boxPad, 540, 'F2', 12, 'Ermächtigung und Hinweis');
         $body = 'Ich ermächtige ' . (string)($data['creditor_name'] ?? '') . ', Zahlungen von meinem Konto mittels SEPA-Lastschrift einzuziehen. Zugleich weise ich mein Kreditinstitut an, die von ' . (string)($data['creditor_name'] ?? '') . ' auf mein Konto gezogenen SEPA-Lastschriften einzulösen.' . "\n\n" .
-            'Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, die Erstattung des belasteten Betrages verlangen. Es gelten dabei die mit meinem Kreditinstitut vereinbarten Bedingungen.';
+            'Verfahren: SEPA Basislastschrift, Core Verfahren.' . "\n\n" .
+            'Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, die Erstattung des belasteten Betrages verlangen. Es gelten dabei die mit meinem Kreditinstitut vereinbarten Bedingungen.' . "\n\n" .
+            'Zusätzlicher Hinweis zu Ihren Rechten: Ihre Rechte im Zusammenhang mit diesem Mandat sind in einer Erklärung erläutert, die Sie von Ihrem Kreditinstitut erhalten können.';
         $cmd .= self::multiText($mLeft + $boxPad, 520, $contentW - (2 * $boxPad), 'F1', 10, 14, $body);
 
         // Signature block
@@ -353,18 +355,26 @@ final class SimplePdf
         $imgDraw = "q {$sigBoxX} {$sigBoxY} {$sigBoxW} {$sigBoxH} re W n {$drawW} 0 0 {$drawH} " . ($sigBoxX + 10) . " " . ($sigBoxY + 18) . " cm /Im1 Do Q\n";
         $cmd .= $imgDraw;
 
-        // Content stream
+        // Content streams
         $contentObj = "<< /Length " . strlen($cmd) . " >>\nstream\n" . $cmd . "endstream";
+
+        $privacyText = 'Wir verarbeiten die in diesem Mandat angegebenen personenbezogenen Daten, insbesondere Name, Anschrift, IBAN sowie Mandatsreferenz, zum Zweck der Durchführung des Lastschrifteinzugs und der Verwaltung dieses Mandats. Bei online erteilten Mandaten verarbeiten wir zusätzlich Nachweisdaten zur Mandatserteilung, insbesondere Zeitstempel, IP Adresse und Browser Informationen, um die Erteilung des Mandats nachweisen und Missbrauch verhindern zu können. Rechtsgrundlagen sind Art. 6 Abs. 1 lit. b DSGVO, soweit die Verarbeitung zur Vertrags und Zahlungsabwicklung erforderlich ist, sowie Art. 6 Abs. 1 lit. f DSGVO für Nachweis und Sicherheitszwecke, sofern keine andere Rechtsgrundlage einschlägig ist. Empfänger sind insbesondere Banken und Zahlungsdienstleister im Rahmen des Lastschriftverfahrens. Die Daten werden gelöscht, sobald sie für die genannten Zwecke nicht mehr erforderlich sind und keine gesetzlichen Aufbewahrungspflichten entgegenstehen. Weitere Informationen, sowie Ihre Betroffenenrechte, finden Sie in unserer Datenschutzerklärung.';
+        $cmdPage2 = '';
+        $cmdPage2 .= self::text($mLeft, 800, 'F2', 18, 'Datenschutzhinweis');
+        $cmdPage2 .= self::multiText($mLeft, 770, $contentW, 'F1', 11, 16, $privacyText);
+        $contentObjPage2 = "<< /Length " . strlen($cmdPage2) . " >>\nstream\n" . $cmdPage2 . "endstream";
 
         // Objects
         $objects = [];
         $objects[] = "<< /Type /Catalog /Pages 2 0 R >>";
-        $objects[] = "<< /Type /Pages /Kids [3 0 R] /Count 1 >>";
+        $objects[] = "<< /Type /Pages /Kids [3 0 R 6 0 R] /Count 2 >>";
 
         $resources = "<< /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >> /F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >> >> /XObject << /Im1 5 0 R >> >>";
         $objects[] = "<< /Type /Page /Parent 2 0 R /Resources {$resources} /MediaBox [0 0 {$pageW} {$pageH}] /Contents 4 0 R >>";
         $objects[] = $contentObj;
         $objects[] = $imgObj;
+        $objects[] = "<< /Type /Page /Parent 2 0 R /Resources {$resources} /MediaBox [0 0 {$pageW} {$pageH}] /Contents 7 0 R >>";
+        $objects[] = $contentObjPage2;
 
         // Build PDF
         $pdf = "%PDF-1.4\n%" . chr(0xE2) . chr(0xE3) . chr(0xCF) . chr(0xD3) . "\n";
