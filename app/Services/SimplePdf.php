@@ -197,14 +197,14 @@ final class SimplePdf
         $cmd .= self::text($mLeft + 310, 800, 'F1', 10, 'Mandatsreferenz: ' . (string)($data['mandate_reference'] ?? ''));
 
         // Boxes
-        $cmd .= self::rect($mLeft, 700, $contentW, 75, [0.97, 0.97, 0.97], [0.85, 0.85, 0.85], 1.0);
+        $cmd .= self::rect($mLeft, 700, $contentW, 80, [0.97, 0.97, 0.97], [0.85, 0.85, 0.85], 1.0);
         $cmd .= self::rect($mLeft, 585, $contentW, 110, [1.0, 1.0, 1.0], [0.85, 0.85, 0.85], 1.0);
         $cmd .= self::rect($mLeft, 260, $contentW, 300, [1.0, 1.0, 1.0], [0.85, 0.85, 0.85], 1.0);
         $cmd .= self::rect($mLeft, 90, $contentW, 140, [0.97, 0.97, 0.97], [0.85, 0.85, 0.85], 1.0);
 
         // Creditor section
-        $cmd .= self::text($mLeft + $boxPad, 760, 'F2', 12, 'Gläubiger');
-        $cmd .= self::text($mLeft + $boxPad, 742, 'F1', 11, (string)($data['creditor_name'] ?? ''));
+        $cmd .= self::text($mLeft + $boxPad, 764, 'F2', 12, 'Gläubiger');
+        $cmd .= self::text($mLeft + $boxPad, 746, 'F1', 11, (string)($data['creditor_name'] ?? ''));
         $creditorAddressParts = [];
         $creditorStreet = trim((string)($data['creditor_street'] ?? ''));
         if ($creditorStreet !== '') {
@@ -219,10 +219,10 @@ final class SimplePdf
             $creditorAddressParts[] = $creditorCountry;
         }
         if (!empty($creditorAddressParts)) {
-            $cmd .= self::text($mLeft + $boxPad, 728, 'F1', 10, 'Adresse: ' . implode(', ', $creditorAddressParts));
+            $cmd .= self::text($mLeft + $boxPad, 732, 'F1', 10, 'Adresse: ' . implode(', ', $creditorAddressParts));
         }
 
-        $cmd .= self::text($mLeft + $boxPad, 714, 'F1', 10, 'Gläubiger Identifikationsnummer: ' . (string)($data['creditor_id'] ?? ''));
+        $cmd .= self::text($mLeft + $boxPad, 718, 'F1', 10, 'Gläubiger Identifikationsnummer: ' . (string)($data['creditor_id'] ?? ''));
         $paymentType = (string)($data['payment_type'] ?? '');
         $paymentLabel = 'unbekannt';
         if ($paymentType === 'OOFF') {
@@ -230,7 +230,7 @@ final class SimplePdf
         } elseif ($paymentType === 'RCUR') {
             $paymentLabel = 'Wiederkehrende Zahlungen';
         }
-        $cmd .= self::text($mLeft + $boxPad, 700, 'F1', 10, 'Zahlungsart: ' . $paymentLabel);
+        $cmd .= self::text($mLeft + $boxPad, 704, 'F1', 10, 'Zahlungsart: ' . $paymentLabel);
 
         // Debtor section
         $cmd .= self::text($mLeft + $boxPad, 675, 'F2', 12, 'Zahlungspflichtiger');
