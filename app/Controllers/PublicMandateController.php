@@ -65,10 +65,15 @@ final class PublicMandateController
         $rawDebtorBic = trim((string)($_POST['debtor_bic'] ?? ''));
         $debtorBic = strtoupper($rawDebtorBic);
         $debtorBic = preg_replace('/[^A-Z0-9]/', '', $debtorBic) ?: '';
+        $rawPaymentType = trim((string)($_POST['payment_type'] ?? ''));
+        $paymentType = in_array($rawPaymentType, ['OOFF', 'RCUR'], true) ? $rawPaymentType : '';
         $signedPlace = trim((string)($_POST['signed_place'] ?? ''));
         $rawSignedDate = trim((string)($_POST['signed_date'] ?? ''));
         $signedDate = $rawSignedDate !== '' ? $rawSignedDate : date('Y-m-d');
         $signature = (string)($_POST['signature_data'] ?? '');
+        $signedAt = date('Y-m-d H:i:s');
+        $signedIp = trim((string)($_SERVER['REMOTE_ADDR'] ?? ''));
+        $signedUserAgent = trim((string)($_SERVER['HTTP_USER_AGENT'] ?? ''));
 
         // Keep entered values when validation fails
         $this->setOld($token, [
@@ -79,12 +84,13 @@ final class PublicMandateController
             'debtor_country' => $rawDebtorCountry !== '' ? strtoupper($rawDebtorCountry) : 'DE',
             'debtor_iban' => $this->formatIbanDisplay($rawDebtorIban),
             'debtor_bic' => $rawDebtorBic,
+            'payment_type' => $paymentType,
             'signed_place' => $signedPlace,
             'signed_date' => $rawSignedDate,
         ]);
 
 
-        if ($debtorName === '' || $debtorStreet === '' || $debtorZip === '' || $debtorCity === '' || $debtorIban === '' || $signedPlace === '' || $signedDate === '') {
+        if ($debtorName === '' || $debtorStreet === '' || $debtorZip === '' || $debtorCity === '' || $debtorIban === '' || $signedPlace === '' || $signedDate === '' || $paymentType === '') {
             Flash::add('error', 'Bitte alle Pflichtfelder ausfüllen.');
             header('Location: ' . App::url('/m/' . $token));
             exit;
@@ -138,6 +144,10 @@ final class PublicMandateController
         SimplePdf::createMandatePdf([
                     'creditor_name' => (string)($settings['creditor_name'] ?? ''),
                     'creditor_id' => (string)($settings['creditor_id'] ?? ''),
+                    'creditor_street' => (string)($settings['creditor_street'] ?? ''),
+                    'creditor_zip' => (string)($settings['creditor_zip'] ?? ''),
+                    'creditor_city' => (string)($settings['creditor_city'] ?? ''),
+                    'creditor_country' => (string)($settings['creditor_country'] ?? ''),
                     'mandate_reference' => (string)($item['mandate_reference'] ?? ''),
                     'debtor_name' => $debtorName,
                     'debtor_street' => $debtorStreet,
@@ -146,8 +156,12 @@ final class PublicMandateController
                     'debtor_country' => $debtorCountry,
                     'debtor_iban' => $debtorIban,
                     'debtor_bic' => $debtorBic,
+                    'payment_type' => $paymentType,
                     'signed_place' => $signedPlace,
                     'signed_date' => $signedDate,
+                    'signed_at' => $signedAt,
+                    'signed_ip' => $signedIp,
+                    'signed_user_agent' => $signedUserAgent,
                 ], $sigFile, $pdfFile);
         } catch (\Throwable $e) {
             \App\Support\Logger::error('PDF Erstellung fehlgeschlagen', $e);
@@ -165,10 +179,14 @@ final class PublicMandateController
             'debtor_country' => $debtorCountry,
             'debtor_iban' => $debtorIban,
             'debtor_bic' => $debtorBic,
+            'payment_type' => $paymentType,
             'signed_place' => $signedPlace,
             'signed_date' => $signedDate,
             'signature_path' => $sigRel,
             'pdf_path' => $pdfRel,
+            'signed_at' => $signedAt,
+            'signed_ip' => $signedIp,
+            'signed_user_agent' => $signedUserAgent,
         ]);
 
         // Upsert into mandates table
@@ -259,6 +277,10 @@ final class PublicMandateController
             SimplePdf::createMandatePdf([
                 'creditor_name' => (string)($settings['creditor_name'] ?? ''),
                 'creditor_id' => (string)($settings['creditor_id'] ?? ''),
+                'creditor_street' => (string)($settings['creditor_street'] ?? ''),
+                'creditor_zip' => (string)($settings['creditor_zip'] ?? ''),
+                'creditor_city' => (string)($settings['creditor_city'] ?? ''),
+                'creditor_country' => (string)($settings['creditor_country'] ?? ''),
                 'mandate_reference' => (string)($item['mandate_reference'] ?? ''),
                 'debtor_name' => (string)($item['debtor_name'] ?? ''),
                 'debtor_street' => (string)($item['debtor_street'] ?? ''),
@@ -267,8 +289,12 @@ final class PublicMandateController
                 'debtor_country' => (string)($item['debtor_country'] ?? 'DE'),
                 'debtor_iban' => (string)($item['debtor_iban'] ?? ''),
                 'debtor_bic' => (string)($item['debtor_bic'] ?? ''),
+                'payment_type' => (string)($item['payment_type'] ?? ''),
                 'signed_place' => (string)($item['signed_place'] ?? ''),
                 'signed_date' => (string)($item['signed_date'] ?? ''),
+                'signed_at' => (string)($item['signed_at'] ?? ''),
+                'signed_ip' => (string)($item['signed_ip'] ?? ''),
+                'signed_user_agent' => (string)($item['signed_user_agent'] ?? ''),
             ], $sigFile, $pdfFile);
 
             $repo->updatePdfPath((int)$item['id'], $pdfRel);

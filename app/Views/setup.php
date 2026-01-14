@@ -66,6 +66,26 @@
     </div>
     <div class="row">
       <div>
+        <label>Gläubiger Straße</label>
+        <input name="creditor_street" placeholder="z.B. Musterstraße 1">
+      </div>
+      <div>
+        <label>Gläubiger PLZ</label>
+        <input name="creditor_zip" placeholder="z.B. 12345">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Gläubiger Ort</label>
+        <input name="creditor_city" placeholder="z.B. Musterstadt">
+      </div>
+      <div>
+        <label>Gläubiger Land (ISO)</label>
+        <input name="creditor_country" placeholder="z.B. DE" maxlength="2">
+      </div>
+    </div>
+    <div class="row">
+      <div>
         <label>IBAN</label>
         <input name="creditor_iban" placeholder="z.B. DE...">
       </div>

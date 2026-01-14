@@ -270,6 +270,10 @@ public function show(array $params): void
             SimplePdf::createMandatePdf([
                 'creditor_name' => (string)($settings['creditor_name'] ?? ''),
                 'creditor_id' => (string)($settings['creditor_id'] ?? ''),
+                'creditor_street' => (string)($settings['creditor_street'] ?? ''),
+                'creditor_zip' => (string)($settings['creditor_zip'] ?? ''),
+                'creditor_city' => (string)($settings['creditor_city'] ?? ''),
+                'creditor_country' => (string)($settings['creditor_country'] ?? ''),
                 'mandate_reference' => (string)($item['mandate_reference'] ?? ''),
                 'debtor_name' => (string)($item['debtor_name'] ?? ''),
                 'debtor_street' => (string)($item['debtor_street'] ?? ''),
@@ -278,8 +282,12 @@ public function show(array $params): void
                 'debtor_country' => (string)($item['debtor_country'] ?? 'DE'),
                 'debtor_iban' => (string)($item['debtor_iban'] ?? ''),
                 'debtor_bic' => (string)($item['debtor_bic'] ?? ''),
+                'payment_type' => (string)($item['payment_type'] ?? ''),
                 'signed_place' => (string)($item['signed_place'] ?? ''),
                 'signed_date' => (string)($item['signed_date'] ?? ''),
+                'signed_at' => (string)($item['signed_at'] ?? ''),
+                'signed_ip' => (string)($item['signed_ip'] ?? ''),
+                'signed_user_agent' => (string)($item['signed_user_agent'] ?? ''),
             ], $sigFile, $pdfFile);
 
             $repo->updatePdfPath((int)$item['id'], $pdfRel);

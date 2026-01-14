@@ -7,6 +7,12 @@ use App\Services\Db;
 
 final class OnlineMandateRepository
 {
+    private const EXTRA_COLUMNS = [
+        'payment_type' => "ENUM('OOFF','RCUR') NULL",
+        'signed_ip' => 'VARCHAR(45) NULL',
+        'signed_user_agent' => 'VARCHAR(255) NULL',
+    ];
+
     public function ensureTable(): void
     {
         $pdo = Db::pdo();
@@ -26,11 +32,14 @@ final class OnlineMandateRepository
             debtor_iban VARCHAR(34) NULL,
             debtor_bic VARCHAR(11) NULL,
             debtor_email VARCHAR(190) NULL,
+            payment_type ENUM('OOFF','RCUR') NULL,
             signed_place VARCHAR(120) NULL,
             signed_date DATE NULL,
             signature_path VARCHAR(255) NULL,
             pdf_path VARCHAR(255) NULL,
             signed_at DATETIME NULL,
+            signed_ip VARCHAR(45) NULL,
+            signed_user_agent VARCHAR(255) NULL,
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
@@ -39,6 +48,18 @@ final class OnlineMandateRepository
             KEY ix_online_mandates_status (status),
             KEY ix_online_mandates_contact (sevdesk_contact_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $rows = $pdo->query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'online_mandates'")->fetchAll();
+        if (!is_array($rows)) {
+            return;
+        }
+        $existing = array_map(static fn ($row) => (string)($row['COLUMN_NAME'] ?? ''), $rows);
+        foreach (self::EXTRA_COLUMNS as $column => $definition) {
+            if (in_array($column, $existing, true)) {
+                continue;
+            }
+            $pdo->exec("ALTER TABLE online_mandates ADD COLUMN {$column} {$definition}");
+        }
     }
 
     public function create(array $data): int
@@ -102,11 +123,14 @@ final class OnlineMandateRepository
             debtor_country = :debtor_country,
             debtor_iban = :debtor_iban,
             debtor_bic = :debtor_bic,
+            payment_type = :payment_type,
             signed_place = :signed_place,
             signed_date = :signed_date,
             signature_path = :signature_path,
             pdf_path = :pdf_path,
-            signed_at = NOW(),
+            signed_at = :signed_at,
+            signed_ip = :signed_ip,
+            signed_user_agent = :signed_user_agent,
             updated_at = NOW()
             WHERE id = :id';
         $st = $pdo->prepare($sql);
@@ -119,10 +143,14 @@ final class OnlineMandateRepository
             'debtor_country' => (string)($data['debtor_country'] ?? 'DE'),
             'debtor_iban' => (string)$data['debtor_iban'],
             'debtor_bic' => (string)($data['debtor_bic'] ?? ''),
+            'payment_type' => (string)($data['payment_type'] ?? ''),
             'signed_place' => (string)($data['signed_place'] ?? ''),
             'signed_date' => (string)$data['signed_date'],
             'signature_path' => (string)$data['signature_path'],
             'pdf_path' => (string)$data['pdf_path'],
+            'signed_at' => (string)($data['signed_at'] ?? date('Y-m-d H:i:s')),
+            'signed_ip' => (string)($data['signed_ip'] ?? ''),
+            'signed_user_agent' => (string)($data['signed_user_agent'] ?? ''),
             'id' => $id,
         ]);
     }
