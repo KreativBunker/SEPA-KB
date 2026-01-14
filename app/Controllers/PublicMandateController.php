@@ -286,7 +286,8 @@ final class PublicMandateController
         }
 
         header('Content-Type: application/pdf');
-        header('Content-Disposition: attachment; filename="SEPA_Mandat_" . (string)($item['mandate_reference'] ?? 'mandat') . ".pdf"');
+        $filename = 'SEPA_Mandat_' . (string)($item['mandate_reference'] ?? 'mandat') . '.pdf';
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Content-Length: ' . filesize($pdfFile));
         readfile($pdfFile);
     }
