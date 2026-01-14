@@ -57,13 +57,17 @@ final class PublicMandateController
         $debtorStreet = trim((string)($_POST['debtor_street'] ?? ''));
         $debtorZip = trim((string)($_POST['debtor_zip'] ?? ''));
         $debtorCity = trim((string)($_POST['debtor_city'] ?? ''));
-        $debtorCountry = strtoupper(trim((string)($_POST['debtor_country'] ?? 'DE')));
-        $debtorIban = strtoupper(trim((string)($_POST['debtor_iban'] ?? '')));
+        $rawDebtorCountry = trim((string)($_POST['debtor_country'] ?? ''));
+        $debtorCountry = strtoupper($rawDebtorCountry !== '' ? $rawDebtorCountry : 'DE');
+        $rawDebtorIban = trim((string)($_POST['debtor_iban'] ?? ''));
+        $debtorIban = strtoupper($rawDebtorIban);
         $debtorIban = preg_replace('/[^A-Z0-9]/', '', $debtorIban) ?: '';
-        $debtorBic = strtoupper(trim((string)($_POST['debtor_bic'] ?? '')));
+        $rawDebtorBic = trim((string)($_POST['debtor_bic'] ?? ''));
+        $debtorBic = strtoupper($rawDebtorBic);
         $debtorBic = preg_replace('/[^A-Z0-9]/', '', $debtorBic) ?: '';
         $signedPlace = trim((string)($_POST['signed_place'] ?? ''));
-        $signedDate = trim((string)($_POST['signed_date'] ?? date('Y-m-d')));
+        $rawSignedDate = trim((string)($_POST['signed_date'] ?? ''));
+        $signedDate = $rawSignedDate !== '' ? $rawSignedDate : date('Y-m-d');
         $signature = (string)($_POST['signature_data'] ?? '');
 
         // Keep entered values when validation fails
@@ -72,11 +76,11 @@ final class PublicMandateController
             'debtor_street' => $debtorStreet,
             'debtor_zip' => $debtorZip,
             'debtor_city' => $debtorCity,
-            'debtor_country' => $debtorCountry,
-            'debtor_iban' => $this->formatIbanDisplay($debtorIban),
-            'debtor_bic' => $debtorBic,
+            'debtor_country' => $rawDebtorCountry !== '' ? strtoupper($rawDebtorCountry) : 'DE',
+            'debtor_iban' => $this->formatIbanDisplay($rawDebtorIban),
+            'debtor_bic' => $rawDebtorBic,
             'signed_place' => $signedPlace,
-            'signed_date' => $signedDate,
+            'signed_date' => $rawSignedDate,
         ]);
 
 
