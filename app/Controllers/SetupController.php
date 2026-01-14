@@ -56,6 +56,10 @@ final class SetupController
         $creditorId = trim((string)($_POST['creditor_id'] ?? ''));
         $creditorIban = trim((string)($_POST['creditor_iban'] ?? ''));
         $creditorBic = trim((string)($_POST['creditor_bic'] ?? ''));
+        $creditorStreet = trim((string)($_POST['creditor_street'] ?? ''));
+        $creditorZip = trim((string)($_POST['creditor_zip'] ?? ''));
+        $creditorCity = trim((string)($_POST['creditor_city'] ?? ''));
+        $creditorCountry = trim((string)($_POST['creditor_country'] ?? ''));
         $initiatingParty = trim((string)($_POST['initiating_party_name'] ?? ''));
 
         $defaultDays = (int)($_POST['default_days_until_collection'] ?? 5);
@@ -87,15 +91,20 @@ final class SetupController
             }
 
             // Insert settings (idempotent)
-            $st = $pdo->prepare('INSERT INTO settings (id, creditor_name, creditor_id, creditor_iban, creditor_bic, initiating_party_name, default_scheme, default_days_until_collection, batch_booking, sanitize_text, include_bic)
-                VALUES (1,:n,:cid,:iban,:bic,:ip,"CORE",:days,:bb,:san,:inc)
-                ON DUPLICATE KEY UPDATE creditor_name=VALUES(creditor_name), creditor_id=VALUES(creditor_id), creditor_iban=VALUES(creditor_iban), creditor_bic=VALUES(creditor_bic), initiating_party_name=VALUES(initiating_party_name),
+            $st = $pdo->prepare('INSERT INTO settings (id, creditor_name, creditor_id, creditor_iban, creditor_bic, creditor_street, creditor_zip, creditor_city, creditor_country, initiating_party_name, default_scheme, default_days_until_collection, batch_booking, sanitize_text, include_bic)
+                VALUES (1,:n,:cid,:iban,:bic,:street,:zip,:city,:country,:ip,"CORE",:days,:bb,:san,:inc)
+                ON DUPLICATE KEY UPDATE creditor_name=VALUES(creditor_name), creditor_id=VALUES(creditor_id), creditor_iban=VALUES(creditor_iban), creditor_bic=VALUES(creditor_bic),
+                    creditor_street=VALUES(creditor_street), creditor_zip=VALUES(creditor_zip), creditor_city=VALUES(creditor_city), creditor_country=VALUES(creditor_country), initiating_party_name=VALUES(initiating_party_name),
                     default_days_until_collection=VALUES(default_days_until_collection), batch_booking=VALUES(batch_booking), sanitize_text=VALUES(sanitize_text), include_bic=VALUES(include_bic)');
             $st->execute([
                 'n' => $creditorName ?: 'Bitte eintragen',
                 'cid' => $creditorId ?: 'DE00ZZZ00000000000',
                 'iban' => $creditorIban ?: 'DE00000000000000000000',
                 'bic' => $creditorBic ?: null,
+                'street' => $creditorStreet ?: null,
+                'zip' => $creditorZip ?: null,
+                'city' => $creditorCity ?: null,
+                'country' => $creditorCountry ?: null,
                 'ip' => $initiatingParty ?: null,
                 'days' => max(0, $defaultDays),
                 'bb' => $batchBooking ? 1 : 0,

@@ -13,6 +13,18 @@ $old = $old ?? [];
   <div class="card" style="background:#f9fafb;">
     <strong>Gläubiger</strong><br>
     <?php echo htmlspecialchars((string)($settings['creditor_name'] ?? '')); ?><br>
+    <?php if (!empty($settings['creditor_street'])): ?>
+      <?php echo htmlspecialchars((string)($settings['creditor_street'] ?? '')); ?><br>
+    <?php endif; ?>
+    <?php
+      $creditorCityLine = trim((string)($settings['creditor_zip'] ?? '') . ' ' . (string)($settings['creditor_city'] ?? ''));
+    ?>
+    <?php if ($creditorCityLine !== ''): ?>
+      <?php echo htmlspecialchars($creditorCityLine); ?><br>
+    <?php endif; ?>
+    <?php if (!empty($settings['creditor_country'])): ?>
+      <?php echo htmlspecialchars((string)($settings['creditor_country'] ?? '')); ?><br>
+    <?php endif; ?>
     <span class="muted">Gläubiger ID: <?php echo htmlspecialchars((string)($settings['creditor_id'] ?? '')); ?></span><br>
     <span class="muted">Mandatsreferenz: <?php echo htmlspecialchars((string)($item['mandate_reference'] ?? '')); ?></span>
   </div>
@@ -49,6 +61,20 @@ $old = $old ?? [];
       <div>
         <label>BIC optional</label>
         <input type="text" name="debtor_bic" placeholder="" value="<?php echo htmlspecialchars((string)($old['debtor_bic'] ?? '')); ?>">
+      </div>
+      <div>
+        <label>Zahlungsart</label>
+        <?php $paymentType = (string)($old['payment_type'] ?? 'RCUR'); ?>
+        <div style="display:flex; gap: 12px; margin-top: 6px; flex-wrap: wrap;">
+          <label style="display:flex; align-items:center; gap: 6px;">
+            <input type="radio" name="payment_type" value="RCUR" <?php echo $paymentType === 'RCUR' ? 'checked' : ''; ?> required>
+            wiederkehrend
+          </label>
+          <label style="display:flex; align-items:center; gap: 6px;">
+            <input type="radio" name="payment_type" value="OOFF" <?php echo $paymentType === 'OOFF' ? 'checked' : ''; ?> required>
+            einmalig
+          </label>
+        </div>
       </div>
       <div>
         <label>Ort der Unterschrift</label>

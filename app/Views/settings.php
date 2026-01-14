@@ -16,6 +16,27 @@
 
     <div class="row">
       <div>
+        <label>Gläubiger Straße</label>
+        <input name="creditor_street" value="<?php echo htmlspecialchars($settings['creditor_street'] ?? ''); ?>">
+      </div>
+      <div>
+        <label>Gläubiger PLZ</label>
+        <input name="creditor_zip" value="<?php echo htmlspecialchars($settings['creditor_zip'] ?? ''); ?>">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Gläubiger Ort</label>
+        <input name="creditor_city" value="<?php echo htmlspecialchars($settings['creditor_city'] ?? ''); ?>">
+      </div>
+      <div>
+        <label>Gläubiger Land (ISO)</label>
+        <input name="creditor_country" value="<?php echo htmlspecialchars($settings['creditor_country'] ?? ''); ?>" maxlength="2">
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
         <label>IBAN</label>
         <input name="creditor_iban" value="<?php echo htmlspecialchars($settings['creditor_iban'] ?? ''); ?>" required>
       </div>
