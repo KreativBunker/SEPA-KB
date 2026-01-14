@@ -255,8 +255,10 @@ final class SimplePdf
         $sigBoxY = 145;
         $sigBoxH = 75;
         $cmd .= self::rect($sigBoxX, $sigBoxY, $sigBoxW, $sigBoxH, [1.0, 1.0, 1.0], [0.85, 0.85, 0.85], 0.6);
-        $cmd .= "0 0 0 RG 1 w {$sigBoxX} 140 m " . ($sigBoxX + $sigBoxW) . " 140 l S\n";
-        $cmd .= self::text($sigBoxX, 125, 'F1', 9, 'Unterschrift');
+        $sigLineY = $sigBoxY + 12;
+        $sigLabelY = $sigBoxY + 4;
+        $cmd .= "0 0 0 RG 1 w {$sigBoxX} {$sigLineY} m " . ($sigBoxX + $sigBoxW) . " {$sigLineY} l S\n";
+        $cmd .= self::text($sigBoxX, $sigLabelY, 'F1', 9, 'Unterschrift');
 
         // Build image object
         $imgMeta = ['w' => 1, 'h' => 1];
@@ -288,8 +290,8 @@ final class SimplePdf
 
         // Only draw image if we have an image object
         $drawW = $sigBoxW - 20.0;
-        $drawH = $sigBoxH - 10.0;
-        $imgDraw = "q {$sigBoxX} {$sigBoxY} {$sigBoxW} {$sigBoxH} re W n {$drawW} 0 0 {$drawH} " . ($sigBoxX + 10) . " " . ($sigBoxY + 5) . " cm /Im1 Do Q\n";
+        $drawH = $sigBoxH - 30.0;
+        $imgDraw = "q {$sigBoxX} {$sigBoxY} {$sigBoxW} {$sigBoxH} re W n {$drawW} 0 0 {$drawH} " . ($sigBoxX + 10) . " " . ($sigBoxY + 18) . " cm /Im1 Do Q\n";
         $cmd .= $imgDraw;
 
         // Content stream
