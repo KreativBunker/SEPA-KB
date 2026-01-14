@@ -32,7 +32,7 @@ use App\Support\App;
 </div>
 
 <div class="card">
-  <div class="table-wrap"><table>
+  <div class="table-wrap"><table class="mandates-table">
     <thead>
       <tr>
         <th>Quelle</th>
@@ -51,6 +51,12 @@ use App\Support\App;
         <?php
           $status = (string)($it['status'] ?? '');
           $statusClass = $status === 'active' ? 'ok' : ($status === 'paused' ? 'warn' : 'err');
+          $statusLabels = [
+            'active' => 'Aktiv',
+            'paused' => 'Pausiert',
+            'revoked' => 'Widerrufen',
+          ];
+          $statusLabel = $statusLabels[$status] ?? $status;
           $srcLabel = (string)($it['source_label'] ?? '');
           $srcClass = ((string)($it['source'] ?? '') === 'online') ? 'ok' : 'secondary';
           $hasPdf = !empty($it['attachment_path']);
@@ -62,10 +68,10 @@ use App\Support\App;
             <span class="muted">Kontakt ID <?php echo (int)($it['sevdesk_contact_id'] ?? 0); ?></span>
           </td>
           <td class="mono iban"><?php echo htmlspecialchars((string)($it['debtor_iban'] ?? '')); ?></td>
-          <td><?php echo htmlspecialchars((string)($it['debtor_bic'] ?? '')); ?></td>
+          <td class="mono bic"><?php echo htmlspecialchars((string)($it['debtor_bic'] ?? '')); ?></td>
           <td><?php echo htmlspecialchars((string)($it['mandate_reference'] ?? '')); ?></td>
           <td><?php echo htmlspecialchars((string)($it['mandate_date'] ?? '')); ?></td>
-          <td><span class="pill <?php echo $statusClass; ?>"><?php echo htmlspecialchars($status); ?></span></td>
+          <td><span class="pill <?php echo $statusClass; ?>"><?php echo htmlspecialchars($statusLabel); ?></span></td>
           <td>
             <?php if ($hasPdf): ?>
               <a class="btn inline secondary" href="<?php echo App::url('/mandates/' . (int)$it['id'] . '/pdf'); ?>">PDF</a>
