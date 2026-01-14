@@ -197,8 +197,8 @@ final class SimplePdf
         $cmd .= self::text($mLeft + 310, 800, 'F1', 10, 'Mandatsreferenz: ' . (string)($data['mandate_reference'] ?? ''));
 
         // Boxes
-        $cmd .= self::rect($mLeft, 700, $contentW, 80, [0.97, 0.97, 0.97], [0.85, 0.85, 0.85], 1.0);
-        $cmd .= self::rect($mLeft, 585, $contentW, 110, [1.0, 1.0, 1.0], [0.85, 0.85, 0.85], 1.0);
+        $cmd .= self::rect($mLeft, 690, $contentW, 90, [0.97, 0.97, 0.97], [0.85, 0.85, 0.85], 1.0);
+        $cmd .= self::rect($mLeft, 560, $contentW, 110, [1.0, 1.0, 1.0], [0.85, 0.85, 0.85], 1.0);
         $cmd .= self::rect($mLeft, 260, $contentW, 300, [1.0, 1.0, 1.0], [0.85, 0.85, 0.85], 1.0);
         $cmd .= self::rect($mLeft, 90, $contentW, 140, [0.97, 0.97, 0.97], [0.85, 0.85, 0.85], 1.0);
 
@@ -233,10 +233,10 @@ final class SimplePdf
         $cmd .= self::text($mLeft + $boxPad, 704, 'F1', 10, 'Zahlungsart: ' . $paymentLabel);
 
         // Debtor section
-        $cmd .= self::text($mLeft + $boxPad, 675, 'F2', 12, 'Zahlungspflichtiger');
-        $cmd .= self::text($mLeft + $boxPad, 655, 'F1', 11, (string)($data['debtor_name'] ?? ''));
+        $cmd .= self::text($mLeft + $boxPad, 650, 'F2', 12, 'Zahlungspflichtiger');
+        $cmd .= self::text($mLeft + $boxPad, 630, 'F1', 11, (string)($data['debtor_name'] ?? ''));
 
-        $y = 639;
+        $y = 614;
         $street = trim((string)($data['debtor_street'] ?? ''));
         if ($street !== '') {
             $cmd .= self::text($mLeft + $boxPad, $y, 'F1', 10, $street);
