@@ -186,6 +186,7 @@ final class SimplePdf
 
         $mLeft = 50.0;
         $mRight = 50.0;
+        $boxPad = 14.0;
         $contentW = $pageW - $mLeft - $mRight;
 
         $cmd = '';
@@ -202,8 +203,8 @@ final class SimplePdf
         $cmd .= self::rect($mLeft, 90, $contentW, 140, [0.97, 0.97, 0.97], [0.85, 0.85, 0.85], 1.0);
 
         // Creditor section
-        $cmd .= self::text($mLeft + 10, 760, 'F2', 12, 'Gläubiger');
-        $cmd .= self::text($mLeft + 10, 742, 'F1', 11, (string)($data['creditor_name'] ?? ''));
+        $cmd .= self::text($mLeft + $boxPad, 760, 'F2', 12, 'Gläubiger');
+        $cmd .= self::text($mLeft + $boxPad, 742, 'F1', 11, (string)($data['creditor_name'] ?? ''));
         $creditorAddressParts = [];
         $creditorStreet = trim((string)($data['creditor_street'] ?? ''));
         if ($creditorStreet !== '') {
@@ -218,10 +219,10 @@ final class SimplePdf
             $creditorAddressParts[] = $creditorCountry;
         }
         if (!empty($creditorAddressParts)) {
-            $cmd .= self::text($mLeft + 10, 728, 'F1', 10, 'Adresse: ' . implode(', ', $creditorAddressParts));
+            $cmd .= self::text($mLeft + $boxPad, 728, 'F1', 10, 'Adresse: ' . implode(', ', $creditorAddressParts));
         }
 
-        $cmd .= self::text($mLeft + 10, 714, 'F1', 10, 'Gläubiger Identifikationsnummer: ' . (string)($data['creditor_id'] ?? ''));
+        $cmd .= self::text($mLeft + $boxPad, 714, 'F1', 10, 'Gläubiger Identifikationsnummer: ' . (string)($data['creditor_id'] ?? ''));
         $paymentType = (string)($data['payment_type'] ?? '');
         $paymentLabel = 'unbekannt';
         if ($paymentType === 'OOFF') {
@@ -229,37 +230,37 @@ final class SimplePdf
         } elseif ($paymentType === 'RCUR') {
             $paymentLabel = 'Wiederkehrende Zahlungen';
         }
-        $cmd .= self::text($mLeft + 10, 700, 'F1', 10, 'Zahlungsart: ' . $paymentLabel);
+        $cmd .= self::text($mLeft + $boxPad, 700, 'F1', 10, 'Zahlungsart: ' . $paymentLabel);
 
         // Debtor section
-        $cmd .= self::text($mLeft + 10, 675, 'F2', 12, 'Zahlungspflichtiger');
-        $cmd .= self::text($mLeft + 10, 655, 'F1', 11, (string)($data['debtor_name'] ?? ''));
+        $cmd .= self::text($mLeft + $boxPad, 675, 'F2', 12, 'Zahlungspflichtiger');
+        $cmd .= self::text($mLeft + $boxPad, 655, 'F1', 11, (string)($data['debtor_name'] ?? ''));
 
         $y = 639;
         $street = trim((string)($data['debtor_street'] ?? ''));
         if ($street !== '') {
-            $cmd .= self::text($mLeft + 10, $y, 'F1', 10, $street);
+            $cmd .= self::text($mLeft + $boxPad, $y, 'F1', 10, $street);
             $y -= 14;
         }
         $cityLine = trim((string)($data['debtor_zip'] ?? '') . ' ' . (string)($data['debtor_city'] ?? ''));
         if ($cityLine !== '') {
-            $cmd .= self::text($mLeft + 10, $y, 'F1', 10, $cityLine);
+            $cmd .= self::text($mLeft + $boxPad, $y, 'F1', 10, $cityLine);
             $y -= 14;
         }
 
-        $cmd .= self::text($mLeft + 10, $y, 'F1', 10, 'IBAN: ' . (string)($data['debtor_iban'] ?? ''));
+        $cmd .= self::text($mLeft + $boxPad, $y, 'F1', 10, 'IBAN: ' . (string)($data['debtor_iban'] ?? ''));
         $y -= 14;
 
         $bic = trim((string)($data['debtor_bic'] ?? ''));
         if ($bic !== '') {
-            $cmd .= self::text($mLeft + 10, $y, 'F1', 10, 'BIC: ' . $bic);
+            $cmd .= self::text($mLeft + $boxPad, $y, 'F1', 10, 'BIC: ' . $bic);
         }
 
         // Legal text
-        $cmd .= self::text($mLeft + 10, 540, 'F2', 12, 'Ermächtigung und Hinweis');
+        $cmd .= self::text($mLeft + $boxPad, 540, 'F2', 12, 'Ermächtigung und Hinweis');
         $body = 'Ich ermächtige ' . (string)($data['creditor_name'] ?? '') . ', Zahlungen von meinem Konto mittels SEPA-Lastschrift einzuziehen. Zugleich weise ich mein Kreditinstitut an, die von ' . (string)($data['creditor_name'] ?? '') . ' auf mein Konto gezogenen SEPA-Lastschriften einzulösen.' . "\n\n" .
             'Hinweis: Ich kann innerhalb von acht Wochen, beginnend mit dem Belastungsdatum, die Erstattung des belasteten Betrages verlangen. Es gelten dabei die mit meinem Kreditinstitut vereinbarten Bedingungen.';
-        $cmd .= self::multiText($mLeft + 10, 520, $contentW - 20, 'F1', 10, 14, $body);
+        $cmd .= self::multiText($mLeft + $boxPad, 520, $contentW - (2 * $boxPad), 'F1', 10, 14, $body);
 
         // Signature block
         $place = trim((string)($data['signed_place'] ?? ''));
@@ -271,12 +272,12 @@ final class SimplePdf
                 $date = $dateObj->format('d.m.Y');
             }
         }
-        $cmd .= self::text($mLeft + 10, 205, 'F1', 11, 'Ort: ' . $place);
-        $cmd .= self::text($mLeft + 10, 185, 'F1', 11, 'Datum: ' . $date);
+        $cmd .= self::text($mLeft + $boxPad, 205, 'F1', 11, 'Ort: ' . $place);
+        $cmd .= self::text($mLeft + $boxPad, 185, 'F1', 11, 'Datum: ' . $date);
 
         // Signature line and label
-        $sigBoxX = $mLeft + 290;
-        $sigBoxW = 245;
+        $sigBoxW = 210;
+        $sigBoxX = $mLeft + $contentW - $sigBoxW - $boxPad;
         $sigBoxY = 145;
         $sigBoxH = 75;
         $cmd .= self::rect($sigBoxX, $sigBoxY, $sigBoxW, $sigBoxH, [1.0, 1.0, 1.0], [0.85, 0.85, 0.85], 0.6);
@@ -300,22 +301,22 @@ final class SimplePdf
         }
 
         $auditY = 165;
-        $cmd .= self::text($mLeft + 10, $auditY, 'F2', 9, 'Nachweis Online-Unterschrift');
+        $cmd .= self::text($mLeft + $boxPad, $auditY, 'F2', 9, 'Nachweis Online-Unterschrift');
         $auditY -= 13;
         if ($signedAt !== '') {
-            $cmd .= self::text($mLeft + 10, $auditY, 'F1', 9, 'Zeitstempel: ' . $signedAt);
+            $cmd .= self::text($mLeft + $boxPad, $auditY, 'F1', 9, 'Zeitstempel: ' . $signedAt);
             $auditY -= 12;
         }
-        $cmd .= self::text($mLeft + 10, $auditY, 'F1', 9, 'Unterzeichner: ' . (string)($data['debtor_name'] ?? ''));
+        $cmd .= self::text($mLeft + $boxPad, $auditY, 'F1', 9, 'Unterzeichner: ' . (string)($data['debtor_name'] ?? ''));
         $auditY -= 12;
-        $cmd .= self::text($mLeft + 10, $auditY, 'F1', 9, 'Mandatsreferenz: ' . (string)($data['mandate_reference'] ?? ''));
+        $cmd .= self::text($mLeft + $boxPad, $auditY, 'F1', 9, 'Mandatsreferenz: ' . (string)($data['mandate_reference'] ?? ''));
         $auditY -= 12;
         if ($signedIp !== '') {
-            $cmd .= self::text($mLeft + 10, $auditY, 'F1', 9, 'IP: ' . $signedIp);
+            $cmd .= self::text($mLeft + $boxPad, $auditY, 'F1', 9, 'IP: ' . $signedIp);
             $auditY -= 12;
         }
         if ($signedUa !== '') {
-            $cmd .= self::text($mLeft + 10, $auditY, 'F1', 9, 'Browser: ' . $signedUa);
+            $cmd .= self::text($mLeft + $boxPad, $auditY, 'F1', 9, 'Browser: ' . $signedUa);
         }
 
         // Build image object
