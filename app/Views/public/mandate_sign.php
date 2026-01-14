@@ -169,17 +169,28 @@ function submitSignature() {
 
 function formatIbanValue(v) {
   if (!v) return '';
-  let s = v.toString().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const s = v.toString().toUpperCase().replace(/[^A-Z0-9]/g, '');
   // Group in 4s: DE92 3202 ...
   return s.replace(/(.{4})/g, '$1 ').trim();
+}
+
+function formatIbanInput(input) {
+  const selectionStart = input.selectionStart ?? input.value.length;
+  const beforeCursor = input.value.slice(0, selectionStart);
+  const cleanedBefore = beforeCursor.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const cleanedAll = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const formatted = formatIbanValue(cleanedAll);
+  const newCursor = formatIbanValue(cleanedBefore).length;
+  input.value = formatted;
+  if (input === document.activeElement) {
+    input.setSelectionRange(newCursor, newCursor);
+  }
 }
 
 const ibanInput = document.getElementById('iban');
 if (ibanInput) {
   ibanInput.addEventListener('input', function() {
-    const old = ibanInput.value;
-    const formatted = formatIbanValue(old);
-    ibanInput.value = formatted;
+    formatIbanInput(ibanInput);
   });
   ibanInput.addEventListener('blur', function() {
     ibanInput.value = formatIbanValue(ibanInput.value);
