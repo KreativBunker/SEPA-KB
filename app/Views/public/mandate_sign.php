@@ -25,7 +25,7 @@ $old = $old ?? [];
     <?php if (!empty($settings['creditor_country'])): ?>
       <?php echo htmlspecialchars((string)($settings['creditor_country'] ?? '')); ?><br>
     <?php endif; ?>
-    <span class="muted">Gläubiger ID: <?php echo htmlspecialchars((string)($settings['creditor_id'] ?? '')); ?></span><br>
+    <div class="muted" style="margin: 8px 0;">Gläubiger ID: <?php echo htmlspecialchars((string)($settings['creditor_id'] ?? '')); ?></div>
     <span class="muted">Mandatsreferenz: <?php echo htmlspecialchars((string)($item['mandate_reference'] ?? '')); ?></span>
   </div>
 
