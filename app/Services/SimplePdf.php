@@ -238,13 +238,23 @@ final class SimplePdf
 
         // Signature block
         $place = trim((string)($data['signed_place'] ?? ''));
-        $date = trim((string)($data['signed_date'] ?? ''));
+        $dateRaw = trim((string)($data['signed_date'] ?? ''));
+        $date = $dateRaw;
+        if ($dateRaw !== '') {
+            $dateObj = \DateTimeImmutable::createFromFormat('Y-m-d', $dateRaw);
+            if ($dateObj instanceof \DateTimeImmutable) {
+                $date = $dateObj->format('d.m.Y');
+            }
+        }
         $cmd .= self::text($mLeft + 10, 205, 'F1', 11, 'Ort: ' . $place);
         $cmd .= self::text($mLeft + 10, 185, 'F1', 11, 'Datum: ' . $date);
 
         // Signature line and label
         $sigBoxX = $mLeft + 290;
         $sigBoxW = 245;
+        $sigBoxY = 145;
+        $sigBoxH = 75;
+        $cmd .= self::rect($sigBoxX, $sigBoxY, $sigBoxW, $sigBoxH, [1.0, 1.0, 1.0], [0.85, 0.85, 0.85], 0.6);
         $cmd .= "0 0 0 RG 1 w {$sigBoxX} 140 m " . ($sigBoxX + $sigBoxW) . " 140 l S\n";
         $cmd .= self::text($sigBoxX, 125, 'F1', 9, 'Unterschrift');
 
@@ -277,9 +287,9 @@ final class SimplePdf
         }
 
         // Only draw image if we have an image object
-        $drawW = 220.0;
-        $drawH = 70.0;
-        $imgDraw = "q {$drawW} 0 0 {$drawH} " . ($sigBoxX + 10) . " 145 cm /Im1 Do Q\n";
+        $drawW = $sigBoxW - 20.0;
+        $drawH = $sigBoxH - 10.0;
+        $imgDraw = "q {$sigBoxX} {$sigBoxY} {$sigBoxW} {$sigBoxH} re W n {$drawW} 0 0 {$drawH} " . ($sigBoxX + 10) . " " . ($sigBoxY + 5) . " cm /Im1 Do Q\n";
         $cmd .= $imgDraw;
 
         // Content stream
