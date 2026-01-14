@@ -5,7 +5,7 @@ use App\Support\Flash;
 $old = $old ?? [];
 ?>
 <div class="card">
-  <h1 style="margin-top:0;">SEPA Mandat online ausfüllen</h1>
+  <h1 style="margin-top:0;">SEPA-Lastschriftmandat online ausfüllen</h1>
   <p class="muted">
     Bitte fülle die Daten aus und unterschreibe. Danach wird automatisch ein PDF erstellt.
   </p>

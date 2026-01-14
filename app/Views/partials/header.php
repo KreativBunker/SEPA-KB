@@ -9,7 +9,7 @@ $messages = $messages ?? Flash::all();
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>SEPA XML Tool</title>
+    <title>SEPA-Lastschriftmandat</title>
     <style>
 * { box-sizing: border-box; }
 body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 0; background: #f6f7fb; color: #1b1f24; }
