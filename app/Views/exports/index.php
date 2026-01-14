@@ -24,7 +24,7 @@
         <tr>
           <td><?php echo (int)$r['id']; ?></td>
           <td><?php echo htmlspecialchars($r['title']); ?></td>
-          <td><?php echo htmlspecialchars($r['collection_date']); ?></td>
+          <td><?php echo htmlspecialchars(\App\Support\DateFormatter::toDisplay((string)$r['collection_date'])); ?></td>
           <td><?php echo htmlspecialchars($r['status']); ?></td>
           <td><?php echo htmlspecialchars((string)$r['total_count']); ?></td>
           <td><?php echo htmlspecialchars(number_format((float)$r['total_sum'], 2, ',', '.')); ?> EUR</td>

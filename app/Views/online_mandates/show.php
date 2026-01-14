@@ -15,8 +15,8 @@ use App\Support\App;
     <tr><th style="width:220px;">Kunde</th><td><?php echo htmlspecialchars((string)$item['contact_name']); ?> (ID <?php echo (int)$item['sevdesk_contact_id']; ?>)</td></tr>
     <tr><th>Mandatsreferenz</th><td><?php echo htmlspecialchars((string)$item['mandate_reference']); ?></td></tr>
     <tr><th>Link</th><td><a href="<?php echo htmlspecialchars((string)$publicUrl); ?>" target="_blank" rel="noopener"><?php echo htmlspecialchars((string)$publicUrl); ?></a></td></tr>
-    <tr><th>Erstellt</th><td><?php echo htmlspecialchars((string)$item['created_at']); ?></td></tr>
-    <tr><th>Unterschrieben</th><td><?php echo htmlspecialchars((string)($item['signed_at'] ?? '')); ?></td></tr>
+    <tr><th>Erstellt</th><td><?php echo htmlspecialchars(\App\Support\DateFormatter::toDisplay((string)$item['created_at'])); ?></td></tr>
+    <tr><th>Unterschrieben</th><td><?php echo htmlspecialchars(\App\Support\DateFormatter::toDisplay((string)($item['signed_at'] ?? ''))); ?></td></tr>
   </table>
 
   <?php if (!empty($item['pdf_path']) && (string)$item['status'] === 'signed'): ?>

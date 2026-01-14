@@ -9,7 +9,7 @@
     </div>
   </div>
 
-  <p class="muted">Titel: <?php echo htmlspecialchars($run['title']); ?>, Datum: <?php echo htmlspecialchars($run['collection_date']); ?>, Status: <?php echo htmlspecialchars($run['status']); ?></p>
+  <p class="muted">Titel: <?php echo htmlspecialchars($run['title']); ?>, Datum: <?php echo htmlspecialchars(\App\Support\DateFormatter::toDisplay((string)$run['collection_date'])); ?>, Status: <?php echo htmlspecialchars($run['status']); ?></p>
 
   <div class="actions" style="margin-top:10px">
     <form method="post" action="<?php echo \App\Support\App::url('/exports/' . (int)$run['id'] . '/validate'); ?>">
