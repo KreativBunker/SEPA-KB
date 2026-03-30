@@ -6,7 +6,6 @@
 /** @var string $remoteUrl */
 /** @var array $pendingCommits */
 ?>
-<?php include __DIR__ . '/partials/header.php'; ?>
 
 <div class="card">
     <h1>System Update</h1>
@@ -34,5 +33,3 @@
         <?php endif; ?>
     <?php endif; ?>
 </div>
-
-<?php include __DIR__ . '/partials/footer.php'; ?>
