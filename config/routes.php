@@ -87,6 +87,10 @@ $router->post('/c/{token}', 'App\\Controllers\\PublicContractController@sign');
 $router->get('/c/{token}/done', 'App\\Controllers\\PublicContractController@done');
 $router->get('/c/{token}/pdf', 'App\\Controllers\\PublicContractController@pdf');
 
+// System Update (Admin only)
+$router->get('/update', 'App\\Controllers\\UpdateController@show', ['auth','role:admin']);
+$router->post('/update', 'App\\Controllers\\UpdateController@run', ['auth','role:admin']);
+
 $router->get('/users', 'App\\Controllers\\UsersController@index', ['auth','role:admin']);
 $router->post('/users/{id}/reset-password', 'App\\Controllers\\UsersController@resetPassword', ['auth','role:admin']);
 $router->post('/users/{id}/delete', 'App\\Controllers\\UsersController@delete', ['auth','role:admin']);
