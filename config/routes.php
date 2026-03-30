@@ -65,6 +65,28 @@ $router->post('/exports/{id}/generate', 'App\\Controllers\\ExportsController@gen
 $router->get('/exports/{id}/download', 'App\\Controllers\\ExportsController@download', ['auth','role:admin,staff']);
 $router->post('/exports/{id}/finalize', 'App\\Controllers\\ExportsController@finalize', ['auth','role:admin,staff']);
 
+// Contract Templates (Admin only)
+$router->get('/contract-templates', 'App\\Controllers\\ContractTemplatesController@index', ['auth','role:admin']);
+$router->get('/contract-templates/create', 'App\\Controllers\\ContractTemplatesController@create', ['auth','role:admin']);
+$router->post('/contract-templates', 'App\\Controllers\\ContractTemplatesController@store', ['auth','role:admin']);
+$router->get('/contract-templates/{id}/edit', 'App\\Controllers\\ContractTemplatesController@edit', ['auth','role:admin']);
+$router->post('/contract-templates/{id}', 'App\\Controllers\\ContractTemplatesController@update', ['auth','role:admin']);
+$router->post('/contract-templates/{id}/delete', 'App\\Controllers\\ContractTemplatesController@delete', ['auth','role:admin']);
+
+// Contracts (Admin + Staff)
+$router->get('/contracts', 'App\\Controllers\\ContractsController@index', ['auth','role:admin,staff']);
+$router->get('/contracts/create', 'App\\Controllers\\ContractsController@create', ['auth','role:admin,staff']);
+$router->post('/contracts', 'App\\Controllers\\ContractsController@store', ['auth','role:admin,staff']);
+$router->get('/contracts/{id}', 'App\\Controllers\\ContractsController@show', ['auth','role:admin,staff']);
+$router->post('/contracts/{id}/revoke', 'App\\Controllers\\ContractsController@revoke', ['auth','role:admin,staff']);
+$router->get('/contracts/{id}/pdf', 'App\\Controllers\\ContractsController@downloadPdf', ['auth','role:admin,staff']);
+
+// Public Contract Signing
+$router->get('/c/{token}', 'App\\Controllers\\PublicContractController@show');
+$router->post('/c/{token}', 'App\\Controllers\\PublicContractController@sign');
+$router->get('/c/{token}/done', 'App\\Controllers\\PublicContractController@done');
+$router->get('/c/{token}/pdf', 'App\\Controllers\\PublicContractController@pdf');
+
 $router->get('/users', 'App\\Controllers\\UsersController@index', ['auth','role:admin']);
 $router->post('/users/{id}/reset-password', 'App\\Controllers\\UsersController@resetPassword', ['auth','role:admin']);
 $router->post('/users/{id}/delete', 'App\\Controllers\\UsersController@delete', ['auth','role:admin']);

@@ -402,4 +402,291 @@ final class SimplePdf
 
         file_put_contents($outPath, $pdf);
     }
+
+    /**
+     * Generate a contract PDF with optional SEPA mandate section.
+     * Supports multi-page contract text, signature block, and privacy page.
+     */
+    public static function createContractPdf(array $data, string $signaturePath, string $outPath): void
+    {
+        $pageW = 595.28; // A4
+        $pageH = 841.89;
+        $mLeft = 50.0;
+        $mRight = 50.0;
+        $mTop = 40.0;
+        $mBottom = 50.0;
+        $contentW = $pageW - $mLeft - $mRight;
+        $fontSize = 10;
+        $lineH = 14;
+        $maxChars = max(10, (int)floor($contentW / ($fontSize * 0.52)));
+
+        $title = (string)($data['title'] ?? 'Vertrag');
+        $bodyText = (string)($data['body'] ?? '');
+        $includeSepa = (int)($data['include_sepa'] ?? 0);
+
+        // Replace placeholders in body text
+        $signerName = (string)($data['signer_name'] ?? '');
+        $placeholders = [
+            '{{name}}' => $signerName,
+            '{{strasse}}' => (string)($data['signer_street'] ?? ''),
+            '{{plz}}' => (string)($data['signer_zip'] ?? ''),
+            '{{ort}}' => (string)($data['signer_city'] ?? ''),
+            '{{land}}' => (string)($data['signer_country'] ?? 'DE'),
+            '{{datum}}' => '',
+            '{{firma}}' => (string)($data['creditor_name'] ?? ''),
+        ];
+        $dateRaw = trim((string)($data['signed_date'] ?? ''));
+        if ($dateRaw !== '') {
+            $dateObj = \DateTimeImmutable::createFromFormat('Y-m-d', $dateRaw);
+            $placeholders['{{datum}}'] = $dateObj instanceof \DateTimeImmutable ? $dateObj->format('d.m.Y') : $dateRaw;
+        }
+        $bodyText = str_replace(array_keys($placeholders), array_values($placeholders), $bodyText);
+
+        // Split body into lines for pagination
+        $allLines = [];
+        $paras = preg_split("/\R/", $bodyText) ?: [];
+        foreach ($paras as $para) {
+            $para = trim((string)$para);
+            if ($para === '') {
+                $allLines[] = '';
+                continue;
+            }
+            $words = preg_split('/\s+/', $para) ?: [];
+            $line = '';
+            foreach ($words as $word) {
+                $test = $line === '' ? $word : ($line . ' ' . $word);
+                $len = function_exists('mb_strlen') ? (int)mb_strlen($test) : (int)strlen($test);
+                if ($len <= $maxChars) {
+                    $line = $test;
+                } else {
+                    $allLines[] = $line;
+                    $line = $word;
+                }
+            }
+            if ($line !== '') {
+                $allLines[] = $line;
+            }
+        }
+
+        // Build content pages
+        $pages = []; // each entry: content stream string
+        $yStart = $pageH - $mTop;
+        $yMin = $mBottom;
+
+        // Page 1: Title + contract text
+        $cmd = '';
+        $cmd .= self::text($mLeft, $yStart, 'F2', 18, $title);
+        $y = $yStart - 30;
+
+        $lineIdx = 0;
+        while ($lineIdx < count($allLines)) {
+            $ln = $allLines[$lineIdx];
+            if ($ln === '') {
+                $y -= (int)($lineH * 0.7);
+            } else {
+                $cmd .= self::text($mLeft, $y, 'F1', $fontSize, $ln);
+                $y -= $lineH;
+            }
+            $lineIdx++;
+
+            if ($y < $yMin && $lineIdx < count($allLines)) {
+                $pages[] = $cmd;
+                $cmd = '';
+                $y = $yStart;
+            }
+        }
+
+        // SEPA section (if enabled)
+        if ($includeSepa) {
+            $sepaNeeded = 120;
+            if ($y - $sepaNeeded < $yMin) {
+                $pages[] = $cmd;
+                $cmd = '';
+                $y = $yStart;
+            }
+
+            $y -= 10;
+            $cmd .= self::rect($mLeft, $y - 90, $contentW, 100, [0.97, 0.97, 0.97], [0.85, 0.85, 0.85], 1.0);
+            $cmd .= self::text($mLeft + 14, $y, 'F2', 12, 'SEPA-Lastschriftmandat');
+            $y -= 18;
+            $mandateRef = (string)($data['mandate_reference'] ?? '');
+            if ($mandateRef !== '') {
+                $cmd .= self::text($mLeft + 14, $y, 'F1', $fontSize, 'Mandatsreferenz: ' . $mandateRef);
+                $y -= $lineH;
+            }
+            $creditorId = (string)($data['creditor_id'] ?? '');
+            if ($creditorId !== '') {
+                $cmd .= self::text($mLeft + 14, $y, 'F1', $fontSize, 'Glaeubiger-ID: ' . $creditorId);
+                $y -= $lineH;
+            }
+            $iban = (string)($data['debtor_iban'] ?? '');
+            if ($iban !== '') {
+                $cmd .= self::text($mLeft + 14, $y, 'F1', $fontSize, 'IBAN: ' . $iban);
+                $y -= $lineH;
+            }
+            $bic = trim((string)($data['debtor_bic'] ?? ''));
+            if ($bic !== '') {
+                $cmd .= self::text($mLeft + 14, $y, 'F1', $fontSize, 'BIC: ' . $bic);
+                $y -= $lineH;
+            }
+            $paymentType = (string)($data['payment_type'] ?? '');
+            if ($paymentType !== '') {
+                $label = $paymentType === 'OOFF' ? 'Einmalige Zahlung' : ($paymentType === 'RCUR' ? 'Wiederkehrende Zahlungen' : $paymentType);
+                $cmd .= self::text($mLeft + 14, $y, 'F1', $fontSize, 'Zahlungsart: ' . $label);
+                $y -= $lineH;
+            }
+            $y -= 10;
+        }
+
+        // Signature block
+        $sigBlockNeeded = 200;
+        if ($y - $sigBlockNeeded < $yMin) {
+            $pages[] = $cmd;
+            $cmd = '';
+            $y = $yStart;
+        }
+
+        $y -= 14;
+        $cmd .= self::rect($mLeft, $y - 140, $contentW, 160, [1.0, 1.0, 1.0], [0.85, 0.85, 0.85], 1.0);
+
+        // Place/Date
+        $place = trim((string)($data['signed_place'] ?? ''));
+        $date = $placeholders['{{datum}}'];
+        $cmd .= self::text($mLeft + 14, $y, 'F1', 11, 'Ort: ' . $place);
+        $y -= 16;
+        $cmd .= self::text($mLeft + 14, $y, 'F1', 11, 'Datum: ' . $date);
+
+        // Signature image box
+        $sigBoxW = 210;
+        $sigBoxX = $mLeft + $contentW - $sigBoxW - 14;
+        $sigBoxY = $y - 80;
+        $sigBoxH = 75;
+        $cmd .= self::rect($sigBoxX, $sigBoxY, $sigBoxW, $sigBoxH, [1.0, 1.0, 1.0], [0.85, 0.85, 0.85], 0.6);
+        $sigLineY = $sigBoxY + 12;
+        $sigLabelY = $sigBoxY + 4;
+        $cmd .= "0 0 0 RG 1 w {$sigBoxX} {$sigLineY} m " . ($sigBoxX + $sigBoxW) . " {$sigLineY} l S\n";
+        $cmd .= self::text($sigBoxX, $sigLabelY, 'F1', 9, 'Unterschrift');
+
+        // Signature image drawing
+        $drawW = $sigBoxW - 20.0;
+        $drawH = $sigBoxH - 30.0;
+        $imgDraw = "q {$sigBoxX} {$sigBoxY} {$sigBoxW} {$sigBoxH} re W n {$drawW} 0 0 {$drawH} " . ($sigBoxX + 10) . " " . ($sigBoxY + 18) . " cm /Im1 Do Q\n";
+        $cmd .= $imgDraw;
+
+        // Audit trail
+        $auditY = $sigBoxY - 8;
+        $cmd .= self::text($mLeft + 14, $auditY, 'F2', 9, 'Nachweis Online-Unterschrift');
+        $auditY -= 13;
+
+        $signedAtRaw = trim((string)($data['signed_at'] ?? ''));
+        if ($signedAtRaw !== '') {
+            $signedAtObj = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $signedAtRaw);
+            $signedAt = $signedAtObj instanceof \DateTimeImmutable ? $signedAtObj->format('d.m.Y H:i') : $signedAtRaw;
+            $cmd .= self::text($mLeft + 14, $auditY, 'F1', 9, 'Zeitstempel: ' . $signedAt);
+            $auditY -= 12;
+        }
+        $cmd .= self::text($mLeft + 14, $auditY, 'F1', 9, 'Unterzeichner: ' . $signerName);
+        $auditY -= 12;
+        $signedIp = trim((string)($data['signed_ip'] ?? ''));
+        if ($signedIp !== '') {
+            $cmd .= self::text($mLeft + 14, $auditY, 'F1', 9, 'IP: ' . $signedIp);
+            $auditY -= 12;
+        }
+        $signedUa = trim((string)($data['signed_user_agent'] ?? ''));
+        if ($signedUa !== '' && strlen($signedUa) > 90) {
+            $signedUa = substr($signedUa, 0, 87) . '...';
+        }
+        if ($signedUa !== '') {
+            $cmd .= self::text($mLeft + 14, $auditY, 'F1', 9, 'Browser: ' . $signedUa);
+        }
+
+        $pages[] = $cmd;
+
+        // Privacy page
+        $privacyText = 'Wir verarbeiten die in diesem Vertrag angegebenen personenbezogenen Daten, insbesondere Name, Anschrift und ggf. IBAN sowie Mandatsreferenz, zum Zweck der Vertragsdurchfuehrung und der Verwaltung dieses Vertrags. Bei online unterzeichneten Vertraegen verarbeiten wir zusaetzlich Nachweisdaten zur Vertragsunterzeichnung, insbesondere Zeitstempel, IP Adresse und Browser Informationen, um die Unterzeichnung des Vertrags nachweisen und Missbrauch verhindern zu koennen. Rechtsgrundlagen sind Art. 6 Abs. 1 lit. b DSGVO, soweit die Verarbeitung zur Vertragsabwicklung erforderlich ist, sowie Art. 6 Abs. 1 lit. f DSGVO fuer Nachweis und Sicherheitszwecke, sofern keine andere Rechtsgrundlage einschlaegig ist. Empfaenger sind insbesondere Banken und Zahlungsdienstleister im Rahmen des Lastschriftverfahrens, sofern ein SEPA Mandat Bestandteil des Vertrags ist. Die Daten werden geloescht, sobald sie fuer die genannten Zwecke nicht mehr erforderlich sind und keine gesetzlichen Aufbewahrungspflichten entgegenstehen. Weitere Informationen sowie Ihre Betroffenenrechte finden Sie in unserer Datenschutzerklaerung.';
+        $cmdPrivacy = '';
+        $cmdPrivacy .= self::text($mLeft, $yStart, 'F2', 18, 'Datenschutzhinweis');
+        $cmdPrivacy .= self::multiText($mLeft, $yStart - 30, $contentW, 'F1', 11, 16, $privacyText);
+        $pages[] = $cmdPrivacy;
+
+        // Build image object
+        $imgMeta = ['w' => 1, 'h' => 1];
+        $imgObj = '';
+
+        $sigExt = strtolower(pathinfo($signaturePath, PATHINFO_EXTENSION));
+        if (in_array($sigExt, ['jpg', 'jpeg'], true)) {
+            $jpegBytes = (string)@file_get_contents($signaturePath);
+            if ($jpegBytes === '') {
+                $jpegBytes = chr(0xFF) . chr(0xD8) . chr(0xFF) . chr(0xD9);
+            }
+            $imgMeta = self::jpegDimensions($jpegBytes);
+            $imgDict = "<< /Type /XObject /Subtype /Image /Width {$imgMeta['w']} /Height {$imgMeta['h']} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length " . strlen($jpegBytes) . " >>";
+            $imgObj = $imgDict . "\nstream\n" . $jpegBytes . "\nendstream";
+        } else {
+            $imgData = chr(0xFF) . chr(0xFF) . chr(0xFF);
+            try {
+                if (is_file($signaturePath)) {
+                    $imgData = self::pngToRgbRaw($signaturePath, $imgMeta);
+                }
+            } catch (\Throwable $e) {
+                // keep placeholder
+            }
+            $imgDict = "<< /Type /XObject /Subtype /Image /Width {$imgMeta['w']} /Height {$imgMeta['h']} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Length " . strlen($imgData) . " >>";
+            $imgObj = $imgDict . "\nstream\n" . $imgData . "\nendstream";
+        }
+
+        // Build PDF objects
+        $pageCount = count($pages);
+        $resources = "<< /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >> /F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >> >> /XObject << /Im1 3 0 R >> >>";
+
+        // Object numbering:
+        // 1 = Catalog
+        // 2 = Pages
+        // 3 = Image
+        // 4,5 = Page1 (page obj, content stream), 6,7 = Page2, etc.
+        $objects = [];
+        $pageRefs = [];
+        $nextObj = 4;
+        for ($i = 0; $i < $pageCount; $i++) {
+            $pageRefs[] = $nextObj . ' 0 R';
+            $nextObj += 2;
+        }
+
+        $objects[] = "<< /Type /Catalog /Pages 2 0 R >>";                    // obj 1
+        $objects[] = "<< /Type /Pages /Kids [" . implode(' ', $pageRefs) . "] /Count {$pageCount} >>"; // obj 2
+        $objects[] = $imgObj;                                                   // obj 3
+
+        for ($i = 0; $i < $pageCount; $i++) {
+            $contentObjNum = 4 + ($i * 2) + 1; // next object after page
+            $objects[] = "<< /Type /Page /Parent 2 0 R /Resources {$resources} /MediaBox [0 0 {$pageW} {$pageH}] /Contents {$contentObjNum} 0 R >>";
+            $stream = $pages[$i];
+            $objects[] = "<< /Length " . strlen($stream) . " >>\nstream\n" . $stream . "endstream";
+        }
+
+        // Build PDF file
+        $pdf = "%PDF-1.4\n%" . chr(0xE2) . chr(0xE3) . chr(0xCF) . chr(0xD3) . "\n";
+        $offsets = [0];
+
+        for ($i = 0; $i < count($objects); $i++) {
+            $num = $i + 1;
+            $offsets[$num] = strlen($pdf);
+            $pdf .= $num . " 0 obj\n" . $objects[$i] . "\nendobj\n";
+        }
+
+        $xrefPos = strlen($pdf);
+        $pdf .= "xref\n0 " . (count($objects) + 1) . "\n";
+        $pdf .= "0000000000 65535 f \n";
+        for ($i = 1; $i <= count($objects); $i++) {
+            $pdf .= sprintf("%010d 00000 n \n", $offsets[$i]);
+        }
+        $pdf .= "trailer\n<< /Size " . (count($objects) + 1) . " /Root 1 0 R >>\n";
+        $pdf .= "startxref\n{$xrefPos}\n%%EOF";
+
+        $dir = dirname($outPath);
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
+
+        file_put_contents($outPath, $pdf);
+    }
 }

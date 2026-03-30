@@ -74,8 +74,10 @@ td { word-break: break-word; }
         <a href="<?php echo App::url('/invoices'); ?>">Rechnungen</a>
         <a href="<?php echo App::url('/exports'); ?>">Exporte</a>
         <a href="<?php echo App::url('/mandates'); ?>">Mandate</a>
+        <a href="<?php echo App::url('/contracts'); ?>">Vertraege</a>
         <a href="<?php echo App::url('/settings'); ?>">Einstellungen</a>
         <?php if (Auth::role() === 'admin'): ?>
+          <a href="<?php echo App::url('/contract-templates'); ?>">Vorlagen</a>
           <a href="<?php echo App::url('/sevdesk'); ?>">sevdesk</a>
           <a href="<?php echo App::url('/users'); ?>">Nutzer</a>
         <?php endif; ?>
