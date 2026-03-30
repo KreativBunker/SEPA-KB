@@ -6,20 +6,22 @@ $body = $isEdit ? (string)($template['body'] ?? '') : '';
 $includeSepa = $isEdit ? (int)($template['include_sepa'] ?? 0) : 0;
 $isActive = $isEdit ? (int)($template['is_active'] ?? 1) : 1;
 ?>
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
 <div class="card">
   <div class="topbar">
     <h1><?php echo $isEdit ? 'Vorlage bearbeiten' : 'Neue Vertragsvorlage'; ?></h1>
     <a href="<?php echo App::url('/contract-templates'); ?>" class="btn secondary">Zurueck</a>
   </div>
 
-  <form method="post" action="<?php echo $isEdit ? App::url('/contract-templates/' . (int)$template['id']) : App::url('/contract-templates'); ?>">
+  <form method="post" id="template-form" action="<?php echo $isEdit ? App::url('/contract-templates/' . (int)$template['id']) : App::url('/contract-templates'); ?>">
     <input type="hidden" name="_csrf" value="<?php echo htmlspecialchars((string)$csrf); ?>">
+    <input type="hidden" name="body" id="body_input" value="">
 
     <label>Titel</label>
     <input type="text" name="title" required value="<?php echo htmlspecialchars($title); ?>" placeholder="z.B. Dienstleistungsvertrag">
 
     <label>Vertragstext</label>
-    <textarea name="body" required rows="14" style="min-height:220px;" placeholder="Vertragstext hier eingeben. Platzhalter: {{name}}, {{strasse}}, {{plz}}, {{ort}}, {{land}}, {{datum}}, {{firma}}"><?php echo htmlspecialchars($body); ?></textarea>
+    <div id="editor-container" style="min-height:280px; background:#fff; border:1px solid #d8dde6; border-radius:0 0 10px 10px;"></div>
     <p class="muted">Verfuegbare Platzhalter: <code>{{name}}</code>, <code>{{strasse}}</code>, <code>{{plz}}</code>, <code>{{ort}}</code>, <code>{{land}}</code>, <code>{{datum}}</code>, <code>{{firma}}</code></p>
 
     <div class="row" style="margin-top: 12px;">
@@ -44,3 +46,49 @@ $isActive = $isEdit ? (int)($template['is_active'] ?? 1) : 1;
     </div>
   </form>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.min.js"></script>
+<script>
+var quill = new Quill('#editor-container', {
+  theme: 'snow',
+  placeholder: 'Vertragstext hier eingeben...',
+  modules: {
+    toolbar: [
+      [{ 'header': [1, 2, 3, false] }],
+      ['bold', 'italic', 'underline'],
+      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+      ['link'],
+      ['clean']
+    ]
+  }
+});
+
+// Load existing body content
+var existingBody = <?php echo json_encode($body, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
+if (existingBody) {
+  // Check if content is HTML or plain text
+  if (existingBody.indexOf('<') !== -1) {
+    quill.root.innerHTML = existingBody;
+  } else {
+    // Plain text: convert newlines to paragraphs
+    quill.setText(existingBody);
+  }
+}
+
+// Sync editor content to hidden input on submit
+document.getElementById('template-form').addEventListener('submit', function(e) {
+  var html = quill.root.innerHTML;
+  // Don't submit empty editor (Quill has <p><br></p> when empty)
+  if (quill.getText().trim() === '') {
+    e.preventDefault();
+    alert('Bitte Vertragstext eingeben.');
+    return false;
+  }
+  document.getElementById('body_input').value = html;
+});
+</script>
+<style>
+.ql-toolbar.ql-snow { border-radius: 10px 10px 0 0; border-color: #d8dde6; }
+.ql-container.ql-snow { border-color: #d8dde6; font-size: 15px; }
+.ql-editor { min-height: 250px; }
+</style>

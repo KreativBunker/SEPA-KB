@@ -1,14 +1,16 @@
 <?php
 use App\Support\App;
 ?>
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
 <div class="card">
   <div class="topbar">
     <h1>Neuer Vertrag</h1>
     <a href="<?php echo App::url('/contracts'); ?>" class="btn secondary">Zurueck</a>
   </div>
 
-  <form method="post" action="<?php echo App::url('/contracts'); ?>">
+  <form method="post" id="contract-form" action="<?php echo App::url('/contracts'); ?>">
     <input type="hidden" name="_csrf" value="<?php echo htmlspecialchars((string)$csrf); ?>">
+    <input type="hidden" name="body" id="body_input" value="">
 
     <label>Vorlage</label>
     <select name="template_id" id="template_select">
@@ -28,7 +30,7 @@ use App\Support\App;
     <input type="text" name="title" id="contract_title" required placeholder="Vertragstitel">
 
     <label>Vertragstext</label>
-    <textarea name="body" id="contract_body" required rows="10" style="min-height:180px;" placeholder="Vertragstext eingeben oder Vorlage waehlen..."></textarea>
+    <div id="editor-container" style="min-height:220px; background:#fff; border:1px solid #d8dde6; border-radius:0 0 10px 10px;"></div>
     <p class="muted">Platzhalter: <code>{{name}}</code>, <code>{{strasse}}</code>, <code>{{plz}}</code>, <code>{{ort}}</code>, <code>{{land}}</code>, <code>{{datum}}</code>, <code>{{firma}}</code></p>
 
     <div style="margin-top:12px;">
@@ -70,16 +72,53 @@ use App\Support\App;
   </form>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.min.js"></script>
 <script>
+var quill = new Quill('#editor-container', {
+  theme: 'snow',
+  placeholder: 'Vertragstext eingeben oder Vorlage waehlen...',
+  modules: {
+    toolbar: [
+      [{ 'header': [1, 2, 3, false] }],
+      ['bold', 'italic', 'underline'],
+      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+      ['link'],
+      ['clean']
+    ]
+  }
+});
+
+// Template selection loads content into Quill
 var tplSelect = document.getElementById('template_select');
 if (tplSelect) {
   tplSelect.addEventListener('change', function() {
     var opt = this.options[this.selectedIndex];
     if (opt && opt.value) {
       document.getElementById('contract_title').value = opt.dataset.title || '';
-      document.getElementById('contract_body').value = opt.dataset.body || '';
+      var bodyContent = opt.dataset.body || '';
+      if (bodyContent.indexOf('<') !== -1) {
+        quill.root.innerHTML = bodyContent;
+      } else {
+        quill.setText(bodyContent);
+      }
       document.getElementById('include_sepa_cb').checked = opt.dataset.sepa === '1';
     }
   });
 }
+
+// Sync editor content to hidden input on submit
+document.getElementById('contract-form').addEventListener('submit', function(e) {
+  var html = quill.root.innerHTML;
+  if (quill.getText().trim() === '') {
+    e.preventDefault();
+    alert('Bitte Vertragstext eingeben.');
+    return false;
+  }
+  document.getElementById('body_input').value = html;
+});
 </script>
+<style>
+.ql-toolbar.ql-snow { border-radius: 10px 10px 0 0; border-color: #d8dde6; }
+.ql-container.ql-snow { border-color: #d8dde6; font-size: 15px; }
+.ql-editor { min-height: 190px; }
+</style>

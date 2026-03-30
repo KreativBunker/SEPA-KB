@@ -40,7 +40,7 @@ elseif ($status === 'revoked') { $statusClass = 'err'; }
   <?php if ($status === 'open'): ?>
     <details style="margin-top:14px;">
       <summary style="cursor:pointer; font-weight:600;">Vertragstext anzeigen</summary>
-      <div style="margin-top:8px; padding:12px; background:#f9fafb; border-radius:8px; white-space:pre-wrap; font-size:14px;"><?php echo htmlspecialchars((string)($item['body'] ?? '')); ?></div>
+      <div style="margin-top:8px; padding:12px; background:#f9fafb; border-radius:8px; font-size:14px; line-height:1.6;"><?php echo strip_tags((string)($item['body'] ?? ''), '<b><i><u><strong><em><h1><h2><h3><p><br><ul><ol><li><a>'); ?></div>
     </details>
   <?php endif; ?>
 
