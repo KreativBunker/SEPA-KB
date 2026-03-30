@@ -40,7 +40,7 @@ final class UpdateController
 
         $currentCommit = self::git($basePath, 'log --oneline -1');
         $branch = trim(self::git($basePath, 'rev-parse --abbrev-ref HEAD'));
-        $remoteUrl = trim(self::git($basePath, 'remote get-url origin 2>&1'));
+        $remoteUrl = self::getDisplayUrl($basePath);
 
         // Fetch latest from remote (non-destructive)
         self::git($basePath, 'fetch origin 2>&1');
@@ -84,7 +84,8 @@ final class UpdateController
         $output = [];
         $exitCode = 1;
         exec("cd " . escapeshellarg($basePath) . " && git pull origin {$safeBranch} 2>&1", $output, $exitCode);
-        $outputText = implode("\n", $output);
+        // Mask any token from git output to prevent leaking in UI/logs
+        $outputText = self::maskToken(implode("\n", $output));
 
         $user = Auth::user();
         $userId = $user ? (int)$user['id'] : 0;
@@ -126,10 +127,58 @@ final class UpdateController
         if ($configUrl === '') {
             return;
         }
+
+        $authUrl = self::buildAuthUrl($configUrl);
         $currentUrl = trim(self::git($basePath, 'remote get-url origin 2>&1'));
-        if ($currentUrl !== $configUrl) {
-            self::git($basePath, 'remote set-url origin ' . escapeshellarg($configUrl) . ' 2>&1');
+        if ($currentUrl !== $authUrl) {
+            self::git($basePath, 'remote set-url origin ' . escapeshellarg($authUrl) . ' 2>&1');
         }
+    }
+
+    /**
+     * Build authenticated URL by injecting the git_token into the HTTPS URL.
+     * Example: https://github.com/... → https://{token}@github.com/...
+     */
+    private static function buildAuthUrl(string $url): string
+    {
+        $token = trim((string)App::config('git_token', ''));
+        if ($token === '') {
+            return $url;
+        }
+
+        $parts = parse_url($url);
+        if ($parts === false || !isset($parts['host'])) {
+            return $url;
+        }
+
+        $scheme = ($parts['scheme'] ?? 'https') . '://';
+        $host = $parts['host'];
+        $port = isset($parts['port']) ? ':' . $parts['port'] : '';
+        $path = $parts['path'] ?? '';
+
+        return $scheme . $token . '@' . $host . $port . $path;
+    }
+
+    /**
+     * Return the display-safe remote URL (token masked).
+     */
+    private static function getDisplayUrl(string $basePath): string
+    {
+        $url = trim(self::git($basePath, 'remote get-url origin 2>&1'));
+        // Mask any token in the URL: https://ghp_xxx@github.com → https://***@github.com
+        return preg_replace('#(https?://)([^@]+)@#', '$1***@', $url);
+    }
+
+    /**
+     * Mask any credentials in git output text.
+     */
+    private static function maskToken(string $text): string
+    {
+        $token = trim((string)App::config('git_token', ''));
+        if ($token !== '') {
+            $text = str_replace($token, '***', $text);
+        }
+        return preg_replace('#(https?://)([^@\s]+)@#', '$1***@', $text);
     }
 
     private static function checkPrerequisites(?string &$error): bool
