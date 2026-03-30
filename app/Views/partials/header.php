@@ -80,6 +80,7 @@ td { word-break: break-word; }
           <a href="<?php echo App::url('/contract-templates'); ?>">Vorlagen</a>
           <a href="<?php echo App::url('/sevdesk'); ?>">sevdesk</a>
           <a href="<?php echo App::url('/users'); ?>">Nutzer</a>
+          <a href="<?php echo App::url('/update'); ?>">Update</a>
         <?php endif; ?>
       <?php endif; ?>
     </div>
