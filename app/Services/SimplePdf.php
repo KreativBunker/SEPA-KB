@@ -404,6 +404,31 @@ final class SimplePdf
     }
 
     /**
+     * Convert HTML content from WYSIWYG editor to plain text suitable for PDF rendering.
+     */
+    private static function htmlToPlainText(string $html): string
+    {
+        if ($html === '') {
+            return '';
+        }
+        // Convert block-level closings to newlines
+        $text = (string)preg_replace('#<br\s*/?\s*>#i', "\n", $html);
+        $text = (string)preg_replace('#</p>#i', "\n", $text);
+        $text = (string)preg_replace('#</h[1-6]>#i', "\n", $text);
+        $text = (string)preg_replace('#</li>#i', "\n", $text);
+        $text = (string)preg_replace('#</tr>#i', "\n", $text);
+        // List items get a dash prefix
+        $text = (string)preg_replace('#<li[^>]*>#i', '- ', $text);
+        // Strip all remaining tags
+        $text = strip_tags($text);
+        // Decode HTML entities
+        $text = html_entity_decode($text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        // Normalize whitespace: collapse multiple blank lines to max 2
+        $text = (string)preg_replace("/\n{3,}/", "\n\n", $text);
+        return trim($text);
+    }
+
+    /**
      * Generate a contract PDF with optional SEPA mandate section.
      * Supports multi-page contract text, signature block, and privacy page.
      */
@@ -441,6 +466,9 @@ final class SimplePdf
             $placeholders['{{datum}}'] = $dateObj instanceof \DateTimeImmutable ? $dateObj->format('d.m.Y') : $dateRaw;
         }
         $bodyText = str_replace(array_keys($placeholders), array_values($placeholders), $bodyText);
+
+        // Convert HTML to plain text for PDF rendering
+        $bodyText = self::htmlToPlainText($bodyText);
 
         // Split body into lines for pagination
         $allLines = [];

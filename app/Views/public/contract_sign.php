@@ -27,8 +27,8 @@ $includeSepa = (int)($item['include_sepa'] ?? 0);
   </div>
   <?php endif; ?>
 
-  <div style="margin: 14px 0; padding: 14px; background:#f9fafb; border-radius:10px; border:1px solid #e5e7eb; white-space:pre-wrap; font-size:14px; max-height:400px; overflow-y:auto;">
-<?php echo htmlspecialchars((string)($item['body'] ?? '')); ?>
+  <div style="margin: 14px 0; padding: 14px; background:#f9fafb; border-radius:10px; border:1px solid #e5e7eb; font-size:14px; max-height:400px; overflow-y:auto; line-height:1.6;">
+<?php echo strip_tags((string)($item['body'] ?? ''), '<b><i><u><strong><em><h1><h2><h3><p><br><ul><ol><li><a>'); ?>
   </div>
 
   <form method="post" action="" onsubmit="return submitSignature();">
