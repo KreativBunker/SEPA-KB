@@ -34,14 +34,18 @@ final class UpdateController
         }
 
         $basePath = App::basePath();
+
+        // Sync remote URL from config if configured
+        self::syncRemoteUrl($basePath);
+
         $currentCommit = self::git($basePath, 'log --oneline -1');
         $branch = trim(self::git($basePath, 'rev-parse --abbrev-ref HEAD'));
+        $remoteUrl = trim(self::git($basePath, 'remote get-url origin 2>&1'));
 
         // Fetch latest from remote (non-destructive)
         self::git($basePath, 'fetch origin 2>&1');
 
         // Check for pending commits
-        $safeBranch = escapeshellarg($branch);
         $pending = self::git($basePath, "log HEAD..origin/{$branch} --oneline 2>&1");
         $pendingCommits = array_filter(explode("\n", $pending), fn(string $line) => trim($line) !== '');
 
@@ -50,6 +54,7 @@ final class UpdateController
             'error' => null,
             'currentCommit' => $currentCommit,
             'branch' => $branch,
+            'remoteUrl' => $remoteUrl,
             'pendingCommits' => $pendingCommits,
             'messages' => Flash::all(),
         ]);
@@ -69,6 +74,10 @@ final class UpdateController
         set_time_limit(120);
 
         $basePath = App::basePath();
+
+        // Sync remote URL from config if configured
+        self::syncRemoteUrl($basePath);
+
         $branch = trim(self::git($basePath, 'rev-parse --abbrev-ref HEAD'));
         $safeBranch = escapeshellarg($branch);
 
@@ -109,6 +118,18 @@ final class UpdateController
 
         header('Location: ' . App::url('/update'));
         exit;
+    }
+
+    private static function syncRemoteUrl(string $basePath): void
+    {
+        $configUrl = trim((string)App::config('git_remote_url', ''));
+        if ($configUrl === '') {
+            return;
+        }
+        $currentUrl = trim(self::git($basePath, 'remote get-url origin 2>&1'));
+        if ($currentUrl !== $configUrl) {
+            self::git($basePath, 'remote set-url origin ' . escapeshellarg($configUrl) . ' 2>&1');
+        }
     }
 
     private static function checkPrerequisites(?string &$error): bool
