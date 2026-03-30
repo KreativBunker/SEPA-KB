@@ -3,6 +3,7 @@
 /** @var string|null $error */
 /** @var string $currentCommit */
 /** @var string $branch */
+/** @var string $remoteUrl */
 /** @var array $pendingCommits */
 ?>
 <?php include __DIR__ . '/partials/header.php'; ?>
@@ -15,6 +16,7 @@
     <?php else: ?>
         <p><strong>Aktuelle Version:</strong> <code class="mono"><?php echo htmlspecialchars($currentCommit); ?></code></p>
         <p><strong>Branch:</strong> <code class="mono"><?php echo htmlspecialchars($branch); ?></code></p>
+        <p><strong>Remote:</strong> <code class="mono"><?php echo htmlspecialchars($remoteUrl); ?></code></p>
 
         <?php if (!empty($pendingCommits)): ?>
             <h2>Verfuegbare Updates (<?php echo count($pendingCommits); ?>)</h2>
