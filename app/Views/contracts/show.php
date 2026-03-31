@@ -40,9 +40,13 @@ elseif ($status === 'revoked') { $statusClass = 'err'; }
   <?php if ($status === 'open'): ?>
     <details style="margin-top:14px;">
       <summary style="cursor:pointer; font-weight:600;">Vertragstext anzeigen</summary>
-      <div style="margin-top:8px; padding:12px; background:#f9fafb; border-radius:8px; font-size:14px; line-height:1.6;"><?php echo strip_tags((string)($item['body'] ?? ''), '<b><i><u><strong><em><h1><h2><h3><p><br><ul><ol><li><a>'); ?></div>
+      <div style="margin-top:8px; padding:12px; background:#f9fafb; border-radius:8px; font-size:14px; line-height:1.6;"><?php echo strip_tags((string)($item['body'] ?? ''), '<b><i><u><strong><em><h1><h2><h3><p><br><ul><ol><li><a><pre><code>'); ?></div>
     </details>
   <?php endif; ?>
+
+  <style>
+    pre.ql-syntax { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; font-family: monospace; font-size: 13px; white-space: pre-wrap; word-wrap: break-word; overflow-x: auto; }
+  </style>
 
   <div class="actions" style="margin-top: 14px;">
     <?php if ($status === 'signed' && !empty($item['signature_path'])): ?>

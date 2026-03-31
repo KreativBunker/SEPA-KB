@@ -85,6 +85,7 @@ var quill = new Quill('#editor-container', {
       ['bold', 'italic', 'underline'],
       [{ 'list': 'ordered' }, { 'list': 'bullet' }],
       ['link'],
+      ['code-block'],
       ['clean']
     ]
   }
