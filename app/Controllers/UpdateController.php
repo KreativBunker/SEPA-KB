@@ -14,48 +14,58 @@ use App\Support\View;
 
 final class UpdateController
 {
+    /** Paths that must never be overwritten during update */
+    private const PROTECTED_PATHS = [
+        'config/installed.lock',
+        'config/debug.lock',
+        'storage/',
+        'vendor/',
+    ];
+
     public function show(): void
     {
         $error = null;
-        $currentCommit = '';
-        $branch = '';
-        $pendingCommits = [];
-
         if (!self::checkPrerequisites($error)) {
             View::render('update', [
                 'csrf' => Csrf::token(),
                 'error' => $error,
-                'currentCommit' => '',
+                'currentVersion' => null,
+                'latestVersion' => null,
+                'repoUrl' => '',
                 'branch' => '',
-                'pendingCommits' => [],
+                'updateAvailable' => false,
                 'messages' => Flash::all(),
             ]);
             return;
         }
 
         $basePath = App::basePath();
+        $repoUrl = trim((string)App::config('git_remote_url', ''));
+        $branch = trim((string)App::config('git_branch', 'main'));
+        $currentVersion = self::readLocalVersion($basePath);
 
-        // Sync remote URL from config if configured
-        self::syncRemoteUrl($basePath);
+        // Check latest version from GitHub API
+        $latestVersion = null;
+        $updateAvailable = false;
+        $repo = self::parseGitHubRepo($repoUrl);
 
-        $currentCommit = self::git($basePath, 'log --oneline -1');
-        $branch = trim(self::git($basePath, 'rev-parse --abbrev-ref HEAD'));
-        $remoteUrl = self::getDisplayUrl($basePath);
-
-        // Fetch latest from remote (non-destructive)
-        self::git($basePath, 'fetch origin 2>&1');
-
-        // Check for pending commits
-        $pending = self::git($basePath, "log HEAD..origin/{$branch} --oneline 2>&1");
-        $pendingCommits = array_filter(explode("\n", $pending), fn(string $line) => trim($line) !== '');
+        if ($repo) {
+            $latestVersion = self::fetchLatestCommit($repo, $branch);
+            if ($latestVersion && $currentVersion) {
+                $updateAvailable = ($currentVersion['sha'] !== $latestVersion['sha']);
+            } elseif ($latestVersion && !$currentVersion) {
+                $updateAvailable = true;
+            }
+        }
 
         View::render('update', [
             'csrf' => Csrf::token(),
             'error' => null,
-            'currentCommit' => $currentCommit,
+            'currentVersion' => $currentVersion,
+            'latestVersion' => $latestVersion,
+            'repoUrl' => $repoUrl,
             'branch' => $branch,
-            'remoteUrl' => $remoteUrl,
-            'pendingCommits' => $pendingCommits,
+            'updateAvailable' => $updateAvailable,
             'messages' => Flash::all(),
         ]);
     }
@@ -71,147 +81,332 @@ final class UpdateController
             exit;
         }
 
-        set_time_limit(120);
+        set_time_limit(180);
 
         $basePath = App::basePath();
+        $repoUrl = trim((string)App::config('git_remote_url', ''));
+        $branch = trim((string)App::config('git_branch', 'main'));
+        $repo = self::parseGitHubRepo($repoUrl);
 
-        // Sync remote URL from config if configured
-        self::syncRemoteUrl($basePath);
-
-        $branch = trim(self::git($basePath, 'rev-parse --abbrev-ref HEAD'));
-        $safeBranch = escapeshellarg($branch);
-
-        $output = [];
-        $exitCode = 1;
-        exec("cd " . escapeshellarg($basePath) . " && git pull origin {$safeBranch} 2>&1", $output, $exitCode);
-        // Mask any token from git output to prevent leaking in UI/logs
-        $outputText = self::maskToken(implode("\n", $output));
+        if (!$repo) {
+            Flash::add('error', 'Ungueltige Repository-URL in der Konfiguration.');
+            header('Location: ' . App::url('/update'));
+            exit;
+        }
 
         $user = Auth::user();
         $userId = $user ? (int)$user['id'] : 0;
 
-        if ($exitCode === 0) {
-            // Run pending migrations
+        try {
+            // 1. Fetch latest commit info
+            $latestVersion = self::fetchLatestCommit($repo, $branch);
+            if (!$latestVersion) {
+                throw new \RuntimeException('Konnte die neueste Version nicht von GitHub abrufen.');
+            }
+
+            // 2. Download ZIP
+            $zipPath = self::downloadZip($repo, $branch);
+
+            // 3. Extract and copy files
+            $filesUpdated = self::extractAndCopy($zipPath, $basePath);
+
+            // 4. Save version info
+            self::writeLocalVersion($basePath, $latestVersion, $branch);
+
+            // 5. Run pending migrations
             $migrationResult = self::runPendingMigrations($basePath);
+
+            // 6. Cleanup
+            @unlink($zipPath);
 
             (new AuditLogRepository())->add($userId, 'system_update', 'system', 0, [
                 'branch' => $branch,
-                'git_output' => $outputText,
+                'sha' => $latestVersion['sha'],
+                'message' => $latestVersion['message'],
+                'files_updated' => $filesUpdated,
                 'migrations' => $migrationResult,
             ]);
 
-            $msg = 'Update erfolgreich ausgefuehrt.';
+            $msg = "Update erfolgreich! Version: " . substr($latestVersion['sha'], 0, 7) . " ({$filesUpdated} Dateien aktualisiert)";
             if ($migrationResult !== '') {
-                $msg .= ' Migrationen: ' . $migrationResult;
+                $msg .= ' | Migrationen: ' . $migrationResult;
             }
             Flash::add('success', $msg);
-        } else {
-            Logger::error('System update failed: ' . $outputText);
+
+        } catch (\Throwable $e) {
+            Logger::error('System update failed: ' . $e->getMessage());
 
             (new AuditLogRepository())->add($userId, 'system_update_failed', 'system', 0, [
                 'branch' => $branch,
-                'git_output' => $outputText,
-                'exit_code' => $exitCode,
+                'error' => $e->getMessage(),
             ]);
 
-            Flash::add('error', 'Update fehlgeschlagen: ' . $outputText);
+            Flash::add('error', 'Update fehlgeschlagen: ' . $e->getMessage());
         }
 
         header('Location: ' . App::url('/update'));
         exit;
     }
 
-    private static function syncRemoteUrl(string $basePath): void
-    {
-        $configUrl = trim((string)App::config('git_remote_url', ''));
-        if ($configUrl === '') {
-            return;
-        }
-
-        $authUrl = self::buildAuthUrl($configUrl);
-        $currentUrl = trim(self::git($basePath, 'remote get-url origin 2>&1'));
-        if ($currentUrl !== $authUrl) {
-            self::git($basePath, 'remote set-url origin ' . escapeshellarg($authUrl) . ' 2>&1');
-        }
-    }
-
-    /**
-     * Build authenticated URL by injecting the git_token into the HTTPS URL.
-     * Example: https://github.com/... → https://{token}@github.com/...
-     */
-    private static function buildAuthUrl(string $url): string
-    {
-        $token = trim((string)App::config('git_token', ''));
-        if ($token === '') {
-            return $url;
-        }
-
-        $parts = parse_url($url);
-        if ($parts === false || !isset($parts['host'])) {
-            return $url;
-        }
-
-        $scheme = ($parts['scheme'] ?? 'https') . '://';
-        $host = $parts['host'];
-        $port = isset($parts['port']) ? ':' . $parts['port'] : '';
-        $path = $parts['path'] ?? '';
-
-        return $scheme . $token . '@' . $host . $port . $path;
-    }
-
-    /**
-     * Return the display-safe remote URL (token masked).
-     */
-    private static function getDisplayUrl(string $basePath): string
-    {
-        $url = trim(self::git($basePath, 'remote get-url origin 2>&1'));
-        // Mask any token in the URL: https://ghp_xxx@github.com → https://***@github.com
-        return preg_replace('#(https?://)([^@]+)@#', '$1***@', $url);
-    }
-
-    /**
-     * Mask any credentials in git output text.
-     */
-    private static function maskToken(string $text): string
-    {
-        $token = trim((string)App::config('git_token', ''));
-        if ($token !== '') {
-            $text = str_replace($token, '***', $text);
-        }
-        return preg_replace('#(https?://)([^@\s]+)@#', '$1***@', $text);
-    }
+    // ── Prerequisites ──────────────────────────────────────────────
 
     private static function checkPrerequisites(?string &$error): bool
     {
-        if (!function_exists('exec')) {
-            $error = 'Die PHP-Funktion exec() ist auf diesem Server nicht verfuegbar.';
+        $repoUrl = trim((string)App::config('git_remote_url', ''));
+        if ($repoUrl === '') {
+            $error = 'Keine Repository-URL konfiguriert. Bitte "git_remote_url" in config/installed.lock setzen.';
             return false;
         }
 
-        $output = [];
-        $code = 1;
-        exec('git --version 2>&1', $output, $code);
-        if ($code !== 0) {
-            $error = 'Git ist auf diesem Server nicht installiert oder nicht im PATH.';
+        $token = trim((string)App::config('git_token', ''));
+        if ($token === '') {
+            $error = 'Kein GitHub-Token konfiguriert. Bitte "git_token" in config/installed.lock setzen.';
             return false;
         }
 
-        $basePath = App::basePath();
-        if (!is_dir($basePath . '/.git')) {
-            $error = 'Das Projektverzeichnis ist kein Git-Repository.';
+        $repo = self::parseGitHubRepo($repoUrl);
+        if (!$repo) {
+            $error = 'Die Repository-URL konnte nicht erkannt werden. Format: https://github.com/owner/repo';
+            return false;
+        }
+
+        if (!class_exists('ZipArchive')) {
+            $error = 'Die PHP-Erweiterung "zip" ist nicht installiert. Bitte beim Hoster aktivieren.';
             return false;
         }
 
         return true;
     }
 
-    private static function git(string $basePath, string $cmd): string
+    // ── GitHub API ─────────────────────────────────────────────────
+
+    /**
+     * Parse "owner/repo" from a GitHub URL.
+     */
+    private static function parseGitHubRepo(string $url): ?string
     {
-        $output = [];
-        $code = 0;
-        exec("cd " . escapeshellarg($basePath) . " && git {$cmd}", $output, $code);
-        return implode("\n", $output);
+        // https://github.com/owner/repo or https://github.com/owner/repo.git
+        if (preg_match('#github\.com/([^/]+/[^/.\s]+)#i', $url, $m)) {
+            return $m[1];
+        }
+        return null;
     }
+
+    /**
+     * Fetch the latest commit info from GitHub API.
+     * @return array{sha: string, message: string, date: string}|null
+     */
+    private static function fetchLatestCommit(string $repo, string $branch): ?array
+    {
+        $url = "https://api.github.com/repos/{$repo}/commits/" . urlencode($branch);
+        $response = self::githubApiGet($url);
+        if (!$response) {
+            return null;
+        }
+
+        $data = json_decode($response, true);
+        if (!is_array($data) || !isset($data['sha'])) {
+            return null;
+        }
+
+        return [
+            'sha' => $data['sha'],
+            'message' => $data['commit']['message'] ?? '',
+            'date' => $data['commit']['committer']['date'] ?? '',
+        ];
+    }
+
+    /**
+     * Download the repository ZIP archive to a temp file.
+     */
+    private static function downloadZip(string $repo, string $branch): string
+    {
+        $url = "https://api.github.com/repos/{$repo}/zipball/" . urlencode($branch);
+        $token = trim((string)App::config('git_token', ''));
+
+        $tmpFile = tempnam(sys_get_temp_dir(), 'sepa_update_') . '.zip';
+
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS => 5,
+            CURLOPT_TIMEOUT => 120,
+            CURLOPT_HTTPHEADER => [
+                'Accept: application/vnd.github+json',
+                'Authorization: Bearer ' . $token,
+                'User-Agent: SEPA-KB-Updater',
+                'X-GitHub-Api-Version: 2022-11-28',
+            ],
+        ]);
+
+        $body = curl_exec($ch);
+        $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($body === false || $curlError !== '') {
+            throw new \RuntimeException('Download fehlgeschlagen: ' . $curlError);
+        }
+
+        if ($httpCode !== 200) {
+            throw new \RuntimeException("GitHub API Fehler (HTTP {$httpCode}). Bitte Token und Repository-URL pruefen.");
+        }
+
+        if (file_put_contents($tmpFile, $body) === false) {
+            throw new \RuntimeException('Konnte ZIP-Datei nicht speichern.');
+        }
+
+        return $tmpFile;
+    }
+
+    /**
+     * Make a GET request to the GitHub API.
+     */
+    private static function githubApiGet(string $url): ?string
+    {
+        $token = trim((string)App::config('git_token', ''));
+
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_HTTPHEADER => [
+                'Accept: application/vnd.github+json',
+                'Authorization: Bearer ' . $token,
+                'User-Agent: SEPA-KB-Updater',
+                'X-GitHub-Api-Version: 2022-11-28',
+            ],
+        ]);
+
+        $body = curl_exec($ch);
+        $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($body === false || $httpCode !== 200) {
+            return null;
+        }
+
+        return $body;
+    }
+
+    // ── ZIP Extraction ─────────────────────────────────────────────
+
+    /**
+     * Extract ZIP and copy files to the project, skipping protected paths.
+     * @return int Number of files updated
+     */
+    private static function extractAndCopy(string $zipPath, string $basePath): int
+    {
+        $zip = new \ZipArchive();
+        if ($zip->open($zipPath) !== true) {
+            throw new \RuntimeException('ZIP-Datei konnte nicht geoeffnet werden.');
+        }
+
+        // GitHub ZIPs have a top-level directory like "owner-repo-sha/"
+        $prefix = '';
+        if ($zip->numFiles > 0) {
+            $firstName = $zip->getNameIndex(0);
+            if ($firstName && str_contains($firstName, '/')) {
+                $prefix = substr($firstName, 0, strpos($firstName, '/') + 1);
+            }
+        }
+
+        $count = 0;
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $name = $zip->getNameIndex($i);
+            if ($name === false) {
+                continue;
+            }
+
+            // Strip the top-level prefix
+            $relativePath = $prefix !== '' ? substr($name, strlen($prefix)) : $name;
+            if ($relativePath === '' || $relativePath === false) {
+                continue;
+            }
+
+            // Skip directories (they end with /)
+            if (str_ends_with($name, '/')) {
+                continue;
+            }
+
+            // Check if path is protected
+            if (self::isProtectedPath($relativePath)) {
+                continue;
+            }
+
+            $targetPath = $basePath . '/' . $relativePath;
+
+            // Create directory if needed
+            $dir = dirname($targetPath);
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+
+            // Extract file
+            $content = $zip->getFromIndex($i);
+            if ($content === false) {
+                continue;
+            }
+
+            file_put_contents($targetPath, $content);
+            $count++;
+        }
+
+        $zip->close();
+        return $count;
+    }
+
+    /**
+     * Check if a relative path is protected from overwriting.
+     */
+    private static function isProtectedPath(string $path): bool
+    {
+        foreach (self::PROTECTED_PATHS as $protected) {
+            if (str_ends_with($protected, '/')) {
+                // Directory protection
+                if (str_starts_with($path, $protected)) {
+                    return true;
+                }
+            } else {
+                // File protection
+                if ($path === $protected) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // ── Version Tracking ───────────────────────────────────────────
+
+    private static function readLocalVersion(string $basePath): ?array
+    {
+        $file = $basePath . '/config/version.json';
+        if (!is_file($file)) {
+            return null;
+        }
+        $data = json_decode((string)file_get_contents($file), true);
+        return is_array($data) ? $data : null;
+    }
+
+    private static function writeLocalVersion(string $basePath, array $version, string $branch): void
+    {
+        $file = $basePath . '/config/version.json';
+        $data = [
+            'sha' => $version['sha'],
+            'message' => $version['message'],
+            'date' => $version['date'],
+            'branch' => $branch,
+            'updated_at' => date('Y-m-d H:i:s'),
+        ];
+        file_put_contents($file, json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+    }
+
+    // ── Migrations ─────────────────────────────────────────────────
 
     private static function runPendingMigrations(string $basePath): string
     {
@@ -223,7 +418,6 @@ final class UpdateController
         try {
             $pdo = Db::connect();
 
-            // Ensure schema_migrations table exists
             $pdo->exec('CREATE TABLE IF NOT EXISTS schema_migrations (
                 filename VARCHAR(190) NOT NULL PRIMARY KEY,
                 applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -234,7 +428,6 @@ final class UpdateController
             if ($count === 0) {
                 $existing = glob($migrationsDir . '/*.sql');
                 if ($existing) {
-                    // Mark all current migrations as already applied (they were run during setup)
                     $stmt = $pdo->prepare('INSERT IGNORE INTO schema_migrations (filename) VALUES (:f)');
                     foreach ($existing as $file) {
                         $stmt->execute(['f' => basename($file)]);

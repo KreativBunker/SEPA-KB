@@ -1,10 +1,11 @@
 <?php
 /** @var string $csrf */
 /** @var string|null $error */
-/** @var string $currentCommit */
+/** @var array|null $currentVersion */
+/** @var array|null $latestVersion */
+/** @var string $repoUrl */
 /** @var string $branch */
-/** @var string $remoteUrl */
-/** @var array $pendingCommits */
+/** @var bool $updateAvailable */
 ?>
 
 <div class="card">
@@ -13,23 +14,49 @@
     <?php if ($error): ?>
         <div class="flash error"><?php echo htmlspecialchars($error); ?></div>
     <?php else: ?>
-        <p><strong>Aktuelle Version:</strong> <code class="mono"><?php echo htmlspecialchars($currentCommit); ?></code></p>
-        <p><strong>Branch:</strong> <code class="mono"><?php echo htmlspecialchars($branch); ?></code></p>
-        <p><strong>Remote:</strong> <code class="mono"><?php echo htmlspecialchars($remoteUrl); ?></code></p>
+        <table style="max-width:500px; margin-bottom:18px;">
+            <tr>
+                <td><strong>Repository</strong></td>
+                <td class="mono"><?php echo htmlspecialchars($repoUrl); ?></td>
+            </tr>
+            <tr>
+                <td><strong>Branch</strong></td>
+                <td class="mono"><?php echo htmlspecialchars($branch); ?></td>
+            </tr>
+            <tr>
+                <td><strong>Installierte Version</strong></td>
+                <td class="mono">
+                    <?php if ($currentVersion): ?>
+                        <?php echo htmlspecialchars(substr($currentVersion['sha'], 0, 7)); ?>
+                        <span class="muted">&mdash; <?php echo htmlspecialchars(strtok($currentVersion['message'], "\n")); ?></span>
+                        <br><span class="muted"><?php echo htmlspecialchars($currentVersion['updated_at'] ?? ''); ?></span>
+                    <?php else: ?>
+                        <span class="muted">Unbekannt (noch kein Update ausgefuehrt)</span>
+                    <?php endif; ?>
+                </td>
+            </tr>
+            <tr>
+                <td><strong>Neueste Version</strong></td>
+                <td class="mono">
+                    <?php if ($latestVersion): ?>
+                        <?php echo htmlspecialchars(substr($latestVersion['sha'], 0, 7)); ?>
+                        <span class="muted">&mdash; <?php echo htmlspecialchars(strtok($latestVersion['message'], "\n")); ?></span>
+                    <?php else: ?>
+                        <span class="muted">Konnte nicht abgerufen werden</span>
+                    <?php endif; ?>
+                </td>
+            </tr>
+        </table>
 
-        <?php if (!empty($pendingCommits)): ?>
-            <h2>Verfuegbare Updates (<?php echo count($pendingCommits); ?>)</h2>
-            <pre class="mono" style="background:#f3f5fb; padding:12px; border-radius:8px; overflow-x:auto; font-size:13px;"><?php
-                foreach ($pendingCommits as $commit) {
-                    echo htmlspecialchars($commit) . "\n";
-                }
-            ?></pre>
+        <?php if ($updateAvailable): ?>
             <form method="post" action="<?php echo \App\Support\App::url('/update'); ?>">
                 <input type="hidden" name="_csrf" value="<?php echo htmlspecialchars($csrf); ?>">
-                <button type="submit" class="btn" onclick="this.disabled=true; this.innerText='Update laeuft...'; this.form.submit();">Update ausfuehren</button>
+                <button type="submit" class="btn" onclick="this.disabled=true; this.innerText='Update wird heruntergeladen...'; this.form.submit();">Update herunterladen &amp; installieren</button>
             </form>
         <?php else: ?>
-            <p class="muted">Keine Updates verfuegbar. Das System ist aktuell.</p>
+            <?php if ($latestVersion): ?>
+                <p><span class="pill ok">Aktuell</span> Das System ist auf dem neuesten Stand.</p>
+            <?php endif; ?>
         <?php endif; ?>
     <?php endif; ?>
 </div>
