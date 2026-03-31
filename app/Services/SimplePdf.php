@@ -474,7 +474,7 @@ final class SimplePdf
         $bodyHtml = str_replace(array_keys($placeholders), array_values($placeholders), $bodyHtml);
 
         // Sanitize HTML: only allow safe tags
-        $bodyHtml = strip_tags($bodyHtml, '<b><i><u><strong><em><h1><h2><h3><p><br><ul><ol><li><a><span><div>');
+        $bodyHtml = strip_tags($bodyHtml, '<b><i><u><strong><em><h1><h2><h3><p><br><ul><ol><li><a><span><div><pre><code>');
 
         // Create TCPDF instance
         $pdf = new \TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
@@ -507,6 +507,8 @@ final class SimplePdf
             h3 { font-size: 11pt; margin-bottom: 2mm; margin-top: 3mm; }
             ul, ol { margin-bottom: 3mm; }
             li { margin-bottom: 1mm; }
+            pre { background-color: #f1f5f9; padding: 3mm; margin-bottom: 4mm; font-family: courier; font-size: 9pt; }
+            code { font-family: courier; font-size: 9pt; }
         </style>';
         $pdf->writeHTML($bodyStyle . $bodyHtml, true, false, true, false, '');
         $pdf->Ln(6);
