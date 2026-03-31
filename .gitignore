@@ -1,0 +1,6 @@
+config/installed.lock
+config/debug.lock
+config/version.json
+storage/logs/
+storage/exports/
+vendor/
