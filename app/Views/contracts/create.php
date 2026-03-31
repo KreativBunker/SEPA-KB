@@ -31,7 +31,9 @@ use App\Support\App;
 
     <label>Vertragstext</label>
     <div id="editor-container" style="min-height:220px; background:#fff; border:1px solid #d8dde6; border-radius:0 0 10px 10px;"></div>
-    <p class="muted">Platzhalter: <code>{{name}}</code>, <code>{{strasse}}</code>, <code>{{plz}}</code>, <code>{{ort}}</code>, <code>{{land}}</code>, <code>{{datum}}</code>, <code>{{firma}}</code>, <code>{{firma_strasse}}</code>, <code>{{firma_plz}}</code>, <code>{{firma_ort}}</code>, <code>{{firma_land}}</code>, <code>{{firma_iban}}</code>, <code>{{firma_bic}}</code>, <code>{{glaeubiger_id}}</code></p>
+    <p class="muted">Platzhalter Mandant: <code>{{mandant_name}}</code>, <code>{{mandant_strasse}}</code>, <code>{{mandant_plz}}</code>, <code>{{mandant_ort}}</code>, <code>{{mandant_land}}</code><br>
+    Platzhalter Firma: <code>{{firma}}</code>, <code>{{firma_strasse}}</code>, <code>{{firma_plz}}</code>, <code>{{firma_ort}}</code>, <code>{{firma_land}}</code>, <code>{{firma_iban}}</code>, <code>{{firma_bic}}</code>, <code>{{glaeubiger_id}}</code><br>
+    Allgemein: <code>{{datum}}</code></p>
 
     <div style="margin-top:12px;">
       <label style="display:flex; align-items:center; gap:8px;">

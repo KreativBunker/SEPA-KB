@@ -450,12 +450,13 @@ final class SimplePdf
         }
 
         $placeholders = [
-            '{{name}}' => htmlspecialchars($signerName),
-            '{{strasse}}' => htmlspecialchars((string)($data['signer_street'] ?? '')),
-            '{{plz}}' => htmlspecialchars((string)($data['signer_zip'] ?? '')),
-            '{{ort}}' => htmlspecialchars((string)($data['signer_city'] ?? '')),
-            '{{land}}' => htmlspecialchars((string)($data['signer_country'] ?? 'DE')),
-            '{{datum}}' => htmlspecialchars($dateDisplay),
+            // Mandant (Unterzeichner)
+            '{{mandant_name}}' => htmlspecialchars($signerName),
+            '{{mandant_strasse}}' => htmlspecialchars((string)($data['signer_street'] ?? '')),
+            '{{mandant_plz}}' => htmlspecialchars((string)($data['signer_zip'] ?? '')),
+            '{{mandant_ort}}' => htmlspecialchars((string)($data['signer_city'] ?? '')),
+            '{{mandant_land}}' => htmlspecialchars((string)($data['signer_country'] ?? 'DE')),
+            // Firma (Einstellungen)
             '{{firma}}' => htmlspecialchars((string)($data['creditor_name'] ?? '')),
             '{{firma_strasse}}' => htmlspecialchars((string)($data['creditor_street'] ?? '')),
             '{{firma_plz}}' => htmlspecialchars((string)($data['creditor_zip'] ?? '')),
@@ -464,6 +465,8 @@ final class SimplePdf
             '{{firma_iban}}' => htmlspecialchars((string)($data['creditor_iban'] ?? '')),
             '{{firma_bic}}' => htmlspecialchars((string)($data['creditor_bic'] ?? '')),
             '{{glaeubiger_id}}' => htmlspecialchars((string)($data['creditor_id'] ?? '')),
+            // Allgemein
+            '{{datum}}' => htmlspecialchars($dateDisplay),
         ];
         $bodyHtml = str_replace(array_keys($placeholders), array_values($placeholders), $bodyHtml);
 
