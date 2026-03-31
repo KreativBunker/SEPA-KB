@@ -411,8 +411,11 @@ final class SimplePdf
         if ($html === '') {
             return '';
         }
+        // Preserve code blocks: add newlines around <pre> tags
+        $text = (string)preg_replace('#<pre[^>]*>#i', "\n", $html);
+        $text = (string)preg_replace('#</pre>#i', "\n", $text);
         // Convert block-level closings to newlines
-        $text = (string)preg_replace('#<br\s*/?\s*>#i', "\n", $html);
+        $text = (string)preg_replace('#<br\s*/?\s*>#i', "\n", $text);
         $text = (string)preg_replace('#</p>#i', "\n", $text);
         $text = (string)preg_replace('#</h[1-6]>#i', "\n", $text);
         $text = (string)preg_replace('#</li>#i', "\n", $text);
