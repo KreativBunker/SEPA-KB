@@ -3,12 +3,12 @@ use App\Support\App;
 ?>
 <div class="card">
   <div class="topbar">
-    <h1>Vertraege</h1>
+    <h1>Verträge</h1>
     <a href="<?php echo App::url('/contracts/create'); ?>" class="btn">Neuer Vertrag</a>
   </div>
 
   <?php if (empty($items)): ?>
-    <p class="muted">Noch keine Vertraege vorhanden.</p>
+    <p class="muted">Noch keine Verträge vorhanden.</p>
   <?php else: ?>
     <div class="table-wrap">
       <table>

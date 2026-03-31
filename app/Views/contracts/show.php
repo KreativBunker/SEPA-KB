@@ -8,7 +8,7 @@ elseif ($status === 'revoked') { $statusClass = 'err'; }
 <div class="card">
   <div style="display:flex; align-items:center; justify-content:space-between; gap: 12px; flex-wrap: wrap;">
     <h1 style="margin:0;"><?php echo htmlspecialchars((string)($item['title'] ?? 'Vertrag')); ?></h1>
-    <a class="btn secondary" href="<?php echo App::url('/contracts'); ?>">Zur Uebersicht</a>
+    <a class="btn secondary" href="<?php echo App::url('/contracts'); ?>">Zur Übersicht</a>
   </div>
 
   <p style="margin-top:8px;">

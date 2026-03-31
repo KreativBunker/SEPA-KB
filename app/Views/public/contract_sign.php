@@ -8,7 +8,7 @@ $includeSepa = (int)($item['include_sepa'] ?? 0);
 <div class="card">
   <h1 style="margin-top:0;"><?php echo htmlspecialchars((string)($item['title'] ?? 'Vertrag')); ?></h1>
   <p class="muted">
-    Bitte lesen Sie den Vertrag, fuellen Sie Ihre Daten aus und unterschreiben Sie.
+    Bitte lesen Sie den Vertrag, füllen Sie Ihre Daten aus und unterschreiben Sie.
   </p>
 
   <?php if (!empty($settings['creditor_name'])): ?>
@@ -38,7 +38,7 @@ $includeSepa = (int)($item['include_sepa'] ?? 0);
     <h2 style="margin-top:16px;">Ihre Daten</h2>
     <div class="grid" style="margin-top: 8px;">
       <div>
-        <label>Vollstaendiger Name</label>
+        <label>Vollständiger Name</label>
         <input type="text" name="signer_name" required value="<?php echo htmlspecialchars((string)($old['signer_name'] ?? '')); ?>">
       </div>
       <div>
@@ -109,7 +109,7 @@ $includeSepa = (int)($item['include_sepa'] ?? 0);
         <canvas id="sig" width="900" height="250" style="width:100%; height:200px; touch-action:none;"></canvas>
       </div>
       <div class="actions" style="margin-top: 10px;">
-        <button type="button" class="btn" style="background:#6b7280;" onclick="clearSig();">Unterschrift loeschen</button>
+        <button type="button" class="btn" style="background:#6b7280;" onclick="clearSig();">Unterschrift löschen</button>
       </div>
       <p class="muted">Tipp: Am Handy den Finger nutzen, am Desktop die Maus.</p>
     </div>
