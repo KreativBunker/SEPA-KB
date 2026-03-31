@@ -32,6 +32,31 @@ final class PublicContractController
 
         $settings = (new SettingsRepository())->get();
 
+        // Resolve placeholders in contract body
+        $body = (string)($item['body'] ?? '');
+        $placeholders = [
+            '{{mandant_name}}' => (string)($item['signer_name'] ?? ''),
+            '{{mandant_strasse}}' => (string)($item['signer_street'] ?? ''),
+            '{{mandant_plz}}' => (string)($item['signer_zip'] ?? ''),
+            '{{mandant_ort}}' => (string)($item['signer_city'] ?? ''),
+            '{{mandant_land}}' => (string)($item['signer_country'] ?? 'DE'),
+            '{{firma}}' => (string)($settings['creditor_name'] ?? ''),
+            '{{firma_strasse}}' => (string)($settings['creditor_street'] ?? ''),
+            '{{firma_plz}}' => (string)($settings['creditor_zip'] ?? ''),
+            '{{firma_ort}}' => (string)($settings['creditor_city'] ?? ''),
+            '{{firma_land}}' => (string)($settings['creditor_country'] ?? ''),
+            '{{firma_iban}}' => (string)($settings['creditor_iban'] ?? ''),
+            '{{firma_bic}}' => (string)($settings['creditor_bic'] ?? ''),
+            '{{glaeubiger_id}}' => (string)($settings['creditor_id'] ?? ''),
+            '{{datum}}' => date('d.m.Y'),
+        ];
+        foreach ($placeholders as $key => $value) {
+            if ($value !== '') {
+                $body = str_replace($key, htmlspecialchars($value), $body);
+            }
+        }
+        $item['body'] = $body;
+
         View::render('public/contract_sign', [
             'item' => $item,
             'settings' => $settings,

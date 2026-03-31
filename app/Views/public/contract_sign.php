@@ -39,23 +39,23 @@ $includeSepa = (int)($item['include_sepa'] ?? 0);
     <div class="grid" style="margin-top: 8px;">
       <div>
         <label>Vollständiger Name</label>
-        <input type="text" name="signer_name" required value="<?php echo htmlspecialchars((string)($old['signer_name'] ?? '')); ?>">
+        <input type="text" name="signer_name" required value="<?php echo htmlspecialchars((string)($old['signer_name'] ?? $item['signer_name'] ?? '')); ?>">
       </div>
       <div>
         <label>Strasse und Hausnummer</label>
-        <input type="text" name="signer_street" required value="<?php echo htmlspecialchars((string)($old['signer_street'] ?? '')); ?>">
+        <input type="text" name="signer_street" required value="<?php echo htmlspecialchars((string)($old['signer_street'] ?? $item['signer_street'] ?? '')); ?>">
       </div>
       <div>
         <label>PLZ</label>
-        <input type="text" name="signer_zip" required value="<?php echo htmlspecialchars((string)($old['signer_zip'] ?? '')); ?>">
+        <input type="text" name="signer_zip" required value="<?php echo htmlspecialchars((string)($old['signer_zip'] ?? $item['signer_zip'] ?? '')); ?>">
       </div>
       <div>
         <label>Ort</label>
-        <input type="text" name="signer_city" required value="<?php echo htmlspecialchars((string)($old['signer_city'] ?? '')); ?>">
+        <input type="text" name="signer_city" required value="<?php echo htmlspecialchars((string)($old['signer_city'] ?? $item['signer_city'] ?? '')); ?>">
       </div>
       <div>
         <label>Land</label>
-        <input type="text" name="signer_country" value="<?php echo htmlspecialchars((string)($old['signer_country'] ?? 'DE')); ?>" maxlength="2">
+        <input type="text" name="signer_country" value="<?php echo htmlspecialchars((string)($old['signer_country'] ?? $item['signer_country'] ?? 'DE')); ?>" maxlength="2">
       </div>
     </div>
 

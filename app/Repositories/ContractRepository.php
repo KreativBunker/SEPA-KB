@@ -81,10 +81,12 @@ final class ContractRepository
         $pdo = Db::pdo();
         $sql = 'INSERT INTO contracts
             (token, template_id, status, title, body, include_sepa, sevdesk_contact_id,
-             contact_name, contact_email, mandate_reference, created_by)
+             contact_name, contact_email, signer_name, signer_street, signer_zip, signer_city, signer_country,
+             mandate_reference, created_by)
             VALUES
             (:token, :template_id, :status, :title, :body, :include_sepa, :sevdesk_contact_id,
-             :contact_name, :contact_email, :mandate_reference, :created_by)';
+             :contact_name, :contact_email, :signer_name, :signer_street, :signer_zip, :signer_city, :signer_country,
+             :mandate_reference, :created_by)';
         $st = $pdo->prepare($sql);
         $st->execute([
             'token' => (string)$data['token'],
@@ -96,6 +98,11 @@ final class ContractRepository
             'sevdesk_contact_id' => $data['sevdesk_contact_id'] ?? null,
             'contact_name' => (string)($data['contact_name'] ?? ''),
             'contact_email' => (string)($data['contact_email'] ?? ''),
+            'signer_name' => $data['signer_name'] ?? null,
+            'signer_street' => $data['signer_street'] ?? null,
+            'signer_zip' => $data['signer_zip'] ?? null,
+            'signer_city' => $data['signer_city'] ?? null,
+            'signer_country' => $data['signer_country'] ?? null,
             'mandate_reference' => $data['mandate_reference'] ?? null,
             'created_by' => $data['created_by'] ?? null,
         ]);

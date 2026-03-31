@@ -76,6 +76,7 @@ $router->post('/contract-templates/{id}/delete', 'App\\Controllers\\ContractTemp
 // Contracts (Admin + Staff)
 $router->get('/contracts', 'App\\Controllers\\ContractsController@index', ['auth','role:admin,staff']);
 $router->get('/contracts/create', 'App\\Controllers\\ContractsController@create', ['auth','role:admin,staff']);
+$router->get('/contracts/contact/{id}', 'App\\Controllers\\ContractsController@contact', ['auth','role:admin,staff']);
 $router->post('/contracts', 'App\\Controllers\\ContractsController@store', ['auth','role:admin,staff']);
 $router->get('/contracts/{id}', 'App\\Controllers\\ContractsController@show', ['auth','role:admin,staff']);
 $router->post('/contracts/{id}/revoke', 'App\\Controllers\\ContractsController@revoke', ['auth','role:admin,staff']);

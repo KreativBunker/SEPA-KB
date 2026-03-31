@@ -58,6 +58,12 @@ final class ContractsController
         $contactId = ($_POST['sevdesk_contact_id'] ?? '') !== '' ? (int)$_POST['sevdesk_contact_id'] : null;
         $contactName = trim((string)($_POST['contact_name'] ?? ''));
         $contactEmail = trim((string)($_POST['contact_email'] ?? ''));
+        $signerName = trim((string)($_POST['signer_name'] ?? ''));
+        $signerStreet = trim((string)($_POST['signer_street'] ?? ''));
+        $signerZip = trim((string)($_POST['signer_zip'] ?? ''));
+        $signerCity = trim((string)($_POST['signer_city'] ?? ''));
+        $rawSignerCountry = trim((string)($_POST['signer_country'] ?? ''));
+        $signerCountry = $rawSignerCountry !== '' ? strtoupper($rawSignerCountry) : 'DE';
         $title = trim((string)($_POST['title'] ?? ''));
         $body = trim((string)($_POST['body'] ?? ''));
 
@@ -134,6 +140,11 @@ final class ContractsController
                 'sevdesk_contact_id' => $contactId,
                 'contact_name' => $contactName,
                 'contact_email' => $contactEmail,
+                'signer_name' => $signerName !== '' ? $signerName : null,
+                'signer_street' => $signerStreet !== '' ? $signerStreet : null,
+                'signer_zip' => $signerZip !== '' ? $signerZip : null,
+                'signer_city' => $signerCity !== '' ? $signerCity : null,
+                'signer_country' => $signerCountry,
                 'mandate_reference' => $mandateRef,
                 'created_by' => $user ? (int)$user['id'] : null,
             ]);
@@ -150,6 +161,11 @@ final class ContractsController
                 'sevdesk_contact_id' => $contactId,
                 'contact_name' => $contactName,
                 'contact_email' => $contactEmail,
+                'signer_name' => $signerName !== '' ? $signerName : null,
+                'signer_street' => $signerStreet !== '' ? $signerStreet : null,
+                'signer_zip' => $signerZip !== '' ? $signerZip : null,
+                'signer_city' => $signerCity !== '' ? $signerCity : null,
+                'signer_country' => $signerCountry,
                 'mandate_reference' => $mandateRef,
                 'created_by' => $user ? (int)$user['id'] : null,
             ]);
@@ -279,6 +295,87 @@ final class ContractsController
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Content-Length: ' . filesize($pdfFile));
         readfile($pdfFile);
+    }
+
+    public function contact(array $params): void
+    {
+        $contactId = (int)($params['id'] ?? 0);
+        $name = '';
+        $email = '';
+
+        $contacts = $_SESSION['sevdesk_contacts_cache'] ?? [];
+        if (is_array($contacts)) {
+            foreach ($contacts as $c) {
+                if ((int)($c['id'] ?? 0) === $contactId) {
+                    $name = trim((string)($c['name'] ?? ''));
+                    $email = trim((string)($c['email'] ?? ''));
+                    break;
+                }
+            }
+        }
+
+        $street = '';
+        $zip = '';
+        $city = '';
+        $country = 'DE';
+
+        try {
+            $client = new SevdeskClient(new SevdeskAccountRepository());
+            $res = $client->getContact($contactId);
+
+            $obj = null;
+            if (isset($res['objects']) && is_array($res['objects']) && !empty($res['objects']) && is_array($res['objects'][0])) {
+                $obj = $res['objects'][0];
+            } elseif (is_array($res)) {
+                $obj = $res;
+            }
+
+            if (is_array($obj)) {
+                if ($name === '') {
+                    $name = trim((string)($obj['name'] ?? ''));
+                    if ($name === '') {
+                        $parts = array_filter([
+                            trim((string)($obj['surename'] ?? '')),
+                            trim((string)($obj['familyname'] ?? '')),
+                        ]);
+                        $name = implode(' ', $parts);
+                    }
+                }
+
+                if ($email === '') {
+                    $email = $this->extractEmail($obj);
+                }
+
+                // Extract address from embedded addresses
+                $addresses = $obj['addresses'] ?? [];
+                if (is_array($addresses) && !empty($addresses)) {
+                    $addr = $addresses[0];
+                    if (is_array($addr)) {
+                        $street = trim((string)($addr['street'] ?? ''));
+                        $zip = trim((string)($addr['zip'] ?? ''));
+                        $city = trim((string)($addr['city'] ?? ''));
+                        $co = $addr['country'] ?? null;
+                        if (is_array($co) && isset($co['code'])) {
+                            $country = strtoupper(trim((string)$co['code']));
+                        } elseif (is_string($co) && strlen($co) === 2) {
+                            $country = strtoupper($co);
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // ignore - return what we have from cache
+        }
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'name' => $name,
+            'email' => $email,
+            'street' => $street,
+            'zip' => $zip,
+            'city' => $city,
+            'country' => $country !== '' ? $country : 'DE',
+        ], JSON_UNESCAPED_UNICODE);
     }
 
     private function generateMandateReference(): string
