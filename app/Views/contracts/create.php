@@ -31,6 +31,7 @@ use App\Support\App;
 
     <label>Vertragstext</label>
     <div id="editor-container" style="min-height:220px; background:#fff; border:1px solid #d8dde6; border-radius:0 0 10px 10px;"></div>
+    <textarea id="html-editor" style="display:none; width:100%; min-height:220px; font-family:monospace; font-size:13px; padding:12px; border:1px solid #d8dde6; border-radius:0 0 10px 10px; background:#f8fafc; tab-size:2; white-space:pre-wrap; box-sizing:border-box;"></textarea>
     <p class="muted">Platzhalter Mandant: <code>{{mandant_name}}</code>, <code>{{mandant_strasse}}</code>, <code>{{mandant_plz}}</code>, <code>{{mandant_ort}}</code>, <code>{{mandant_land}}</code><br>
     Platzhalter Firma: <code>{{firma}}</code>, <code>{{firma_strasse}}</code>, <code>{{firma_plz}}</code>, <code>{{firma_ort}}</code>, <code>{{firma_land}}</code>, <code>{{firma_iban}}</code>, <code>{{firma_bic}}</code>, <code>{{glaeubiger_id}}</code><br>
     Allgemein: <code>{{datum}}</code></p>
@@ -85,7 +86,6 @@ var quill = new Quill('#editor-container', {
       ['bold', 'italic', 'underline'],
       [{ 'list': 'ordered' }, { 'list': 'bullet' }],
       ['link'],
-      ['code-block'],
       ['clean']
     ]
   }
@@ -109,9 +109,42 @@ if (tplSelect) {
   });
 }
 
+// HTML toggle
+var htmlMode = false;
+var htmlEditor = document.getElementById('html-editor');
+var editorContainer = document.getElementById('editor-container');
+
+var toolbarEl = document.querySelector('.ql-toolbar');
+if (toolbarEl) {
+  var htmlBtn = document.createElement('button');
+  htmlBtn.type = 'button';
+  htmlBtn.innerHTML = '&lt;/&gt;';
+  htmlBtn.title = 'HTML bearbeiten';
+  htmlBtn.className = 'ql-html-toggle';
+  htmlBtn.addEventListener('click', function() {
+    htmlMode = !htmlMode;
+    if (htmlMode) {
+      htmlEditor.value = quill.root.innerHTML;
+      editorContainer.style.display = 'none';
+      htmlEditor.style.display = 'block';
+      htmlBtn.classList.add('ql-active');
+    } else {
+      quill.root.innerHTML = htmlEditor.value;
+      htmlEditor.style.display = 'none';
+      editorContainer.style.display = '';
+      htmlBtn.classList.remove('ql-active');
+    }
+  });
+  var span = document.createElement('span');
+  span.className = 'ql-formats';
+  span.appendChild(htmlBtn);
+  toolbarEl.appendChild(span);
+}
+
 // Sync editor content to hidden input on submit
 document.getElementById('contract-form').addEventListener('submit', function(e) {
-  var html = quill.root.innerHTML;
+  var html = htmlMode ? htmlEditor.value : quill.root.innerHTML;
+  if (htmlMode) { quill.root.innerHTML = html; }
   if (quill.getText().trim() === '') {
     e.preventDefault();
     alert('Bitte Vertragstext eingeben.');
@@ -124,4 +157,6 @@ document.getElementById('contract-form').addEventListener('submit', function(e) 
 .ql-toolbar.ql-snow { border-radius: 10px 10px 0 0; border-color: #d8dde6; }
 .ql-container.ql-snow { border-color: #d8dde6; font-size: 15px; }
 .ql-editor { min-height: 190px; }
+.ql-html-toggle { font-family: monospace !important; font-size: 13px !important; font-weight: 700 !important; padding: 2px 6px !important; }
+.ql-html-toggle.ql-active { color: #06c !important; background: #e8f0fe !important; border-radius: 3px; }
 </style>
