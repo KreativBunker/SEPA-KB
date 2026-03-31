@@ -33,7 +33,36 @@ final class ContractsController
     {
         $templates = (new ContractTemplateRepository())->allActive();
         $contacts = $_SESSION['sevdesk_contacts_cache'] ?? [];
-        if (is_array($contacts)) {
+
+        // Auto-load contacts from Sevdesk if cache is empty
+        if (!is_array($contacts) || empty($contacts)) {
+            try {
+                $client = new SevdeskClient(new SevdeskAccountRepository());
+                $all = $client->getAllContacts(null, 200, 5000);
+                $normalized = [];
+                foreach ($all as $c) {
+                    if (!is_array($c)) {
+                        continue;
+                    }
+                    $normalized[] = [
+                        'id' => (int)($c['id'] ?? 0),
+                        'name' => (string)($c['name'] ?? ''),
+                        'email' => $this->extractEmail($c),
+                        'customerNumber' => $c['customerNumber'] ?? null,
+                        'bankAccount' => $c['bankAccount'] ?? null,
+                        'bankBic' => $c['bankBic'] ?? ($c['bic'] ?? null),
+                    ];
+                }
+                usort($normalized, function (array $a, array $b): int {
+                    return mb_strtolower((string)($a['name'] ?? '')) <=> mb_strtolower((string)($b['name'] ?? ''));
+                });
+                $_SESSION['sevdesk_contacts_cache'] = $normalized;
+                $contacts = $normalized;
+            } catch (\Throwable $e) {
+                // Sevdesk nicht konfiguriert oder nicht erreichbar
+                $contacts = [];
+            }
+        } else {
             usort($contacts, function ($a, $b): int {
                 return mb_strtolower((string)($a['name'] ?? '')) <=> mb_strtolower((string)($b['name'] ?? ''));
             });

@@ -176,32 +176,31 @@ if (contactSelect) {
   contactSelect.addEventListener('change', function() {
     var id = this.value;
     if (!id) return;
-    fetch('<?php echo App::url('/contracts/contact/'); ?>' + id, { credentials: 'same-origin' })
-      .then(function(r) { return r.json(); })
+    fetch('<?php echo App::url('/contracts/contact/'); ?>' + encodeURIComponent(id), { credentials: 'same-origin' })
+      .then(function(r) { return r.ok ? r.json() : null; })
       .then(function(d) {
-        if (d.name && !document.getElementById('contact_name').value) {
+        if (!d) return;
+        if (d.name) {
           document.getElementById('contact_name').value = d.name;
-        }
-        if (d.email && !document.getElementById('contact_email').value) {
-          document.getElementById('contact_email').value = d.email;
-        }
-        if (d.name && !document.getElementById('signer_name').value) {
           document.getElementById('signer_name').value = d.name;
         }
-        if (d.street && !document.getElementById('signer_street').value) {
+        if (d.email) {
+          document.getElementById('contact_email').value = d.email;
+        }
+        if (d.street) {
           document.getElementById('signer_street').value = d.street;
         }
-        if (d.zip && !document.getElementById('signer_zip').value) {
+        if (d.zip) {
           document.getElementById('signer_zip').value = d.zip;
         }
-        if (d.city && !document.getElementById('signer_city').value) {
+        if (d.city) {
           document.getElementById('signer_city').value = d.city;
         }
         if (d.country) {
           document.getElementById('signer_country').value = d.country;
         }
       })
-      .catch(function() {});
+      .catch(function(e) { console.error('Kontaktdaten laden fehlgeschlagen:', e); });
   });
 }
 
