@@ -457,6 +457,13 @@ final class SimplePdf
             '{{land}}' => htmlspecialchars((string)($data['signer_country'] ?? 'DE')),
             '{{datum}}' => htmlspecialchars($dateDisplay),
             '{{firma}}' => htmlspecialchars((string)($data['creditor_name'] ?? '')),
+            '{{firma_strasse}}' => htmlspecialchars((string)($data['creditor_street'] ?? '')),
+            '{{firma_plz}}' => htmlspecialchars((string)($data['creditor_zip'] ?? '')),
+            '{{firma_ort}}' => htmlspecialchars((string)($data['creditor_city'] ?? '')),
+            '{{firma_land}}' => htmlspecialchars((string)($data['creditor_country'] ?? '')),
+            '{{firma_iban}}' => htmlspecialchars((string)($data['creditor_iban'] ?? '')),
+            '{{firma_bic}}' => htmlspecialchars((string)($data['creditor_bic'] ?? '')),
+            '{{glaeubiger_id}}' => htmlspecialchars((string)($data['creditor_id'] ?? '')),
         ];
         $bodyHtml = str_replace(array_keys($placeholders), array_values($placeholders), $bodyHtml);
 
