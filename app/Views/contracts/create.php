@@ -5,7 +5,7 @@ use App\Support\App;
 <div class="card">
   <div class="topbar">
     <h1>Neuer Vertrag</h1>
-    <a href="<?php echo App::url('/contracts'); ?>" class="btn secondary">Zurueck</a>
+    <a href="<?php echo App::url('/contracts'); ?>" class="btn secondary">Zurück</a>
   </div>
 
   <form method="post" id="contract-form" action="<?php echo App::url('/contracts'); ?>">
@@ -31,7 +31,7 @@ use App\Support\App;
 
     <label>Vertragstext</label>
     <div id="editor-container" style="min-height:220px; background:#fff; border:1px solid #d8dde6; border-radius:0 0 10px 10px;"></div>
-    <p class="muted">Platzhalter: <code>{{name}}</code>, <code>{{strasse}}</code>, <code>{{plz}}</code>, <code>{{ort}}</code>, <code>{{land}}</code>, <code>{{datum}}</code>, <code>{{firma}}</code>, <code>{{firma_strasse}}</code>, <code>{{firma_plz}}</code>, <code>{{firma_ort}}</code>, <code>{{firma_land}}</code>, <code>{{firma_iban}}</code>, <code>{{firma_bic}}</code>, <code>{{glaeubiger_id}}</code></p>
+    <p class="muted">Platzhalter: <code>{{name}}</code>, <code>{{strasse}}</code>, <code>{{plz}}</code>, <code>{{ort}}</code>, <code>{{land}}</code>, <code>{{datum}}</code>, <code>{{firma}}</code>, <code>{{firma_strasse}}</code>, <code>{{firma_plz}}</code>, <code>{{firma_ort}}</code>, <code>{{firma_land}}</code>, <code>{{firma_iban}}</code>, <code>{{firma_bic}}</code>, <code>{{gläubiger_id}}</code></p>
 
     <div style="margin-top:12px;">
       <label style="display:flex; align-items:center; gap:8px;">
@@ -76,7 +76,7 @@ use App\Support\App;
 <script>
 var quill = new Quill('#editor-container', {
   theme: 'snow',
-  placeholder: 'Vertragstext eingeben oder Vorlage waehlen...',
+  placeholder: 'Vertragstext eingeben oder Vorlage wählen...',
   modules: {
     toolbar: [
       [{ 'header': [1, 2, 3, false] }],

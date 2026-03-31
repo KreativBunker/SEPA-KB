@@ -26,7 +26,7 @@ final class PublicContractController
 
         if (!$item || (string)$item['status'] !== 'open') {
             http_response_code(404);
-            echo 'Link nicht gueltig.';
+            echo 'Link nicht gültig.';
             return;
         }
 
@@ -48,7 +48,7 @@ final class PublicContractController
 
         if (!$item || (string)$item['status'] !== 'open') {
             http_response_code(404);
-            echo 'Link nicht gueltig.';
+            echo 'Link nicht gültig.';
             return;
         }
 
@@ -99,20 +99,20 @@ final class PublicContractController
 
         // Validation
         if ($signerName === '' || $signerStreet === '' || $signerZip === '' || $signerCity === '' || $signedPlace === '' || $signedDate === '') {
-            Flash::add('error', 'Bitte alle Pflichtfelder ausfuellen.');
+            Flash::add('error', 'Bitte alle Pflichtfelder ausfüllen.');
             header('Location: ' . App::url('/c/' . $token));
             exit;
         }
 
         if ($includeSepa) {
             if ($debtorIban === '' || $paymentType === '') {
-                Flash::add('error', 'Bitte IBAN und Zahlungsart ausfuellen.');
+                Flash::add('error', 'Bitte IBAN und Zahlungsart ausfüllen.');
                 header('Location: ' . App::url('/c/' . $token));
                 exit;
             }
             $val = new ValidationService();
             if (!$val->validateIban($debtorIban)) {
-                Flash::add('error', 'IBAN ist ungueltig.');
+                Flash::add('error', 'IBAN ist ungültig.');
                 header('Location: ' . App::url('/c/' . $token));
                 exit;
             }
