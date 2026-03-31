@@ -49,7 +49,7 @@ final class ContractsController
     public function store(): void
     {
         if (!Csrf::check((string)($_POST['_csrf'] ?? ''))) {
-            Flash::add('error', 'Sicherheits-Token ungueltig.');
+            Flash::add('error', 'Sicherheits-Token ungültig.');
             header('Location: ' . App::url('/contracts/create'));
             exit;
         }
@@ -184,7 +184,7 @@ final class ContractsController
     public function revoke(array $params): void
     {
         if (!Csrf::check((string)($_POST['_csrf'] ?? ''))) {
-            Flash::add('error', 'Sicherheits-Token ungueltig.');
+            Flash::add('error', 'Sicherheits-Token ungültig.');
             header('Location: ' . App::url('/contracts'));
             exit;
         }

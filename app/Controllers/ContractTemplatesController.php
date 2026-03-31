@@ -34,7 +34,7 @@ final class ContractTemplatesController
     public function store(): void
     {
         if (!Csrf::check((string)($_POST['_csrf'] ?? ''))) {
-            Flash::add('error', 'Sicherheits-Token ungueltig.');
+            Flash::add('error', 'Sicherheits-Token ungültig.');
             header('Location: ' . App::url('/contract-templates/create'));
             exit;
         }
@@ -88,7 +88,7 @@ final class ContractTemplatesController
         $id = (int)($params['id'] ?? 0);
 
         if (!Csrf::check((string)($_POST['_csrf'] ?? ''))) {
-            Flash::add('error', 'Sicherheits-Token ungueltig.');
+            Flash::add('error', 'Sicherheits-Token ungültig.');
             header('Location: ' . App::url('/contract-templates/' . $id . '/edit'));
             exit;
         }
@@ -129,7 +129,7 @@ final class ContractTemplatesController
         $id = (int)($params['id'] ?? 0);
 
         if (!Csrf::check((string)($_POST['_csrf'] ?? ''))) {
-            Flash::add('error', 'Sicherheits-Token ungueltig.');
+            Flash::add('error', 'Sicherheits-Token ungültig.');
             header('Location: ' . App::url('/contract-templates'));
             exit;
         }
@@ -137,7 +137,7 @@ final class ContractTemplatesController
         $repo = new ContractTemplateRepository();
         $repo->delete($id);
 
-        Flash::add('success', 'Vorlage geloescht.');
+        Flash::add('success', 'Vorlage gelöscht.');
         header('Location: ' . App::url('/contract-templates'));
         exit;
     }

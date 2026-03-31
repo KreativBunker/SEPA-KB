@@ -43,9 +43,9 @@ use App\Support\App;
             <td>
               <div class="actions">
                 <a href="<?php echo App::url('/contract-templates/' . (int)$t['id'] . '/edit'); ?>" class="btn inline secondary">Bearbeiten</a>
-                <form method="post" action="<?php echo App::url('/contract-templates/' . (int)$t['id'] . '/delete'); ?>" style="display:inline;" onsubmit="return confirm('Vorlage wirklich loeschen?');">
+                <form method="post" action="<?php echo App::url('/contract-templates/' . (int)$t['id'] . '/delete'); ?>" style="display:inline;" onsubmit="return confirm('Vorlage wirklich löschen?');">
                   <input type="hidden" name="_csrf" value="<?php echo htmlspecialchars((string)$csrf); ?>">
-                  <button type="submit" class="btn inline danger">Loeschen</button>
+                  <button type="submit" class="btn inline danger">Löschen</button>
                 </form>
               </div>
             </td>

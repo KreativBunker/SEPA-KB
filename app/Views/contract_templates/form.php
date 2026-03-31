@@ -10,7 +10,7 @@ $isActive = $isEdit ? (int)($template['is_active'] ?? 1) : 1;
 <div class="card">
   <div class="topbar">
     <h1><?php echo $isEdit ? 'Vorlage bearbeiten' : 'Neue Vertragsvorlage'; ?></h1>
-    <a href="<?php echo App::url('/contract-templates'); ?>" class="btn secondary">Zurueck</a>
+    <a href="<?php echo App::url('/contract-templates'); ?>" class="btn secondary">Zurück</a>
   </div>
 
   <form method="post" id="template-form" action="<?php echo $isEdit ? App::url('/contract-templates/' . (int)$template['id']) : App::url('/contract-templates'); ?>">
@@ -32,14 +32,14 @@ $isActive = $isEdit ? (int)($template['is_active'] ?? 1) : 1;
           <input type="checkbox" name="include_sepa" value="1" <?php echo $includeSepa ? 'checked' : ''; ?> style="width:auto;">
           SEPA-Lastschriftmandat einschliessen
         </label>
-        <p class="muted">Wenn aktiviert, werden beim Unterschreiben zusaetzlich IBAN und BIC abgefragt.</p>
+        <p class="muted">Wenn aktiviert, werden beim Unterschreiben zusätzlich IBAN und BIC abgefragt.</p>
       </div>
       <div>
         <label style="display:flex; align-items:center; gap:8px;">
           <input type="checkbox" name="is_active" value="1" <?php echo $isActive ? 'checked' : ''; ?> style="width:auto;">
           Vorlage aktiv
         </label>
-        <p class="muted">Nur aktive Vorlagen koennen fuer neue Vertraege verwendet werden.</p>
+        <p class="muted">Nur aktive Vorlagen können für neue Verträge verwendet werden.</p>
       </div>
     </div>
 

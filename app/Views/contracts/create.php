@@ -5,7 +5,7 @@ use App\Support\App;
 <div class="card">
   <div class="topbar">
     <h1>Neuer Vertrag</h1>
-    <a href="<?php echo App::url('/contracts'); ?>" class="btn secondary">Zurueck</a>
+    <a href="<?php echo App::url('/contracts'); ?>" class="btn secondary">Zurück</a>
   </div>
 
   <form method="post" id="contract-form" action="<?php echo App::url('/contracts'); ?>">
@@ -78,7 +78,7 @@ use App\Support\App;
 <script>
 var quill = new Quill('#editor-container', {
   theme: 'snow',
-  placeholder: 'Vertragstext eingeben oder Vorlage waehlen...',
+  placeholder: 'Vertragstext eingeben oder Vorlage wählen...',
   modules: {
     toolbar: [
       [{ 'header': [1, 2, 3, false] }],

@@ -28,6 +28,10 @@ textarea { min-height: 90px; }
 @media (max-width: 740px) {
     .row, .row3, .grid { grid-template-columns: 1fr; }
     header a { display: inline-block; margin-bottom: 6px; }
+    .nav-sep { display: none; }
+    .nav-group { display: block; margin-bottom: 4px; }
+    .nav-dropdown-menu { position: static; box-shadow: none; min-width: 0; display: block; padding: 0; border-radius: 0; }
+    .nav-dropdown-toggle::after { display: none; }
 }
 .btn { background: #1D3860; color:#fff; border:0; padding: 11px 14px; border-radius: 10px; cursor:pointer; font-weight: 700; text-decoration: none; display: inline-block; }
 .btn.inline { padding: 9px 12px; }
@@ -47,6 +51,25 @@ th { background: #f3f5fb; font-size: 13px; text-transform: uppercase; letter-spa
 .flash.info { background:#e0f2fe; color:#075985; }
 .actions { display:flex; gap: 10px; flex-wrap: wrap; }
 .topbar { display:flex; align-items:center; justify-content:space-between; gap: 10px; }
+.nav-group { display: inline; }
+.nav-sep { display: inline-block; width: 1px; height: 16px; background: rgba(255,255,255,0.3); margin: 0 8px; vertical-align: middle; }
+.nav-dropdown { position: relative; display: inline-block; }
+.nav-dropdown-toggle { cursor: pointer; }
+.nav-dropdown-toggle::after { content: ' \25BE'; font-size: 11px; }
+.nav-dropdown-menu {
+  display: none; position: absolute; top: 100%; right: 0;
+  background: #1D3860; border-radius: 0 0 10px 10px;
+  min-width: 180px; padding: 6px 0;
+  box-shadow: 0 8px 24px rgba(0,0,0,.2); z-index: 100;
+}
+.nav-dropdown:hover .nav-dropdown-menu,
+.nav-dropdown:focus-within .nav-dropdown-menu { display: block; }
+.nav-dropdown-menu a {
+  display: block; padding: 8px 16px; margin: 0;
+  white-space: nowrap; border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.nav-dropdown-menu a:last-child { border-bottom: 0; }
+.nav-dropdown-menu a:hover { background: rgba(255,255,255,0.1); }
 
 
 .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -69,19 +92,30 @@ td { word-break: break-word; }
 <header>
   <div class="wrap topbar">
     <div>
-      <a href="<?php echo App::url('/'); ?>">Dashboard</a>
+      <span class="nav-group">
+        <a href="<?php echo App::url('/'); ?>">Dashboard</a>
+      </span>
       <?php if (Auth::check()): ?>
-        <a href="<?php echo App::url('/invoices'); ?>">Rechnungen</a>
-        <a href="<?php echo App::url('/exports'); ?>">Exporte</a>
-        <a href="<?php echo App::url('/mandates'); ?>">Mandate</a>
-        <a href="<?php echo App::url('/contracts'); ?>">Vertraege</a>
-        <a href="<?php echo App::url('/settings'); ?>">Einstellungen</a>
-        <?php if (Auth::role() === 'admin'): ?>
-          <a href="<?php echo App::url('/contract-templates'); ?>">Vorlagen</a>
-          <a href="<?php echo App::url('/sevdesk'); ?>">sevdesk</a>
-          <a href="<?php echo App::url('/users'); ?>">Nutzer</a>
-          <a href="<?php echo App::url('/update'); ?>">Update</a>
-        <?php endif; ?>
+        <span class="nav-sep"></span>
+        <span class="nav-group">
+          <a href="<?php echo App::url('/mandates'); ?>">Mandate</a>
+          <a href="<?php echo App::url('/contracts'); ?>">Verträge</a>
+          <a href="<?php echo App::url('/invoices'); ?>">Rechnungen</a>
+          <a href="<?php echo App::url('/exports'); ?>">Exporte</a>
+        </span>
+        <span class="nav-sep"></span>
+        <span class="nav-dropdown">
+          <a class="nav-dropdown-toggle">Einstellungen</a>
+          <div class="nav-dropdown-menu">
+            <a href="<?php echo App::url('/settings'); ?>">Einstellungen</a>
+            <?php if (Auth::role() === 'admin'): ?>
+              <a href="<?php echo App::url('/contract-templates'); ?>">Vorlagen</a>
+              <a href="<?php echo App::url('/sevdesk'); ?>">sevdesk</a>
+              <a href="<?php echo App::url('/users'); ?>">Nutzer</a>
+              <a href="<?php echo App::url('/update'); ?>">Update</a>
+            <?php endif; ?>
+          </div>
+        </span>
       <?php endif; ?>
     </div>
     <div>

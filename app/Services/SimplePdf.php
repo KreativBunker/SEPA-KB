@@ -634,10 +634,10 @@ final class SimplePdf
         $pdf->Ln(4);
 
         $pdf->SetFont('helvetica', '', 10);
-        $privacyText = 'Wir verarbeiten die in diesem Vertrag angegebenen personenbezogenen Daten, insbesondere Name, Anschrift und ggf. IBAN sowie Mandatsreferenz, zum Zweck der Vertragsdurchfuehrung und der Verwaltung dieses Vertrags. Bei online unterzeichneten Vertraegen verarbeiten wir zusaetzlich Nachweisdaten zur Vertragsunterzeichnung, insbesondere Zeitstempel, IP-Adresse und Browser-Informationen, um die Unterzeichnung des Vertrags nachweisen und Missbrauch verhindern zu koennen.' . "\n\n" .
-            'Rechtsgrundlagen sind Art. 6 Abs. 1 lit. b DSGVO, soweit die Verarbeitung zur Vertragsabwicklung erforderlich ist, sowie Art. 6 Abs. 1 lit. f DSGVO fuer Nachweis- und Sicherheitszwecke, sofern keine andere Rechtsgrundlage einschlaegig ist.' . "\n\n" .
-            'Empfaenger sind insbesondere Banken und Zahlungsdienstleister im Rahmen des Lastschriftverfahrens, sofern ein SEPA-Mandat Bestandteil des Vertrags ist. Die Daten werden geloescht, sobald sie fuer die genannten Zwecke nicht mehr erforderlich sind und keine gesetzlichen Aufbewahrungspflichten entgegenstehen.' . "\n\n" .
-            'Weitere Informationen sowie Ihre Betroffenenrechte finden Sie in unserer Datenschutzerklaerung.';
+        $privacyText = 'Wir verarbeiten die in diesem Vertrag angegebenen personenbezogenen Daten, insbesondere Name, Anschrift und ggf. IBAN sowie Mandatsreferenz, zum Zweck der Vertragsdurchführung und der Verwaltung dieses Vertrags. Bei online unterzeichneten Verträgen verarbeiten wir zusätzlich Nachweisdaten zur Vertragsunterzeichnung, insbesondere Zeitstempel, IP-Adresse und Browser-Informationen, um die Unterzeichnung des Vertrags nachweisen und Missbrauch verhindern zu können.' . "\n\n" .
+            'Rechtsgrundlagen sind Art. 6 Abs. 1 lit. b DSGVO, soweit die Verarbeitung zur Vertragsabwicklung erforderlich ist, sowie Art. 6 Abs. 1 lit. f DSGVO für Nachweis- und Sicherheitszwecke, sofern keine andere Rechtsgrundlage einschlägig ist.' . "\n\n" .
+            'Empfänger sind insbesondere Banken und Zahlungsdienstleister im Rahmen des Lastschriftverfahrens, sofern ein SEPA-Mandat Bestandteil des Vertrags ist. Die Daten werden gelöscht, sobald sie für die genannten Zwecke nicht mehr erforderlich sind und keine gesetzlichen Aufbewahrungspflichten entgegenstehen.' . "\n\n" .
+            'Weitere Informationen sowie Ihre Betroffenenrechte finden Sie in unserer Datenschutzerklärung.';
         $pdf->MultiCell(0, 6, $privacyText, 0, 'L', false, 1, '', '', true, 0, false, true, 0, 'T');
 
         // Output PDF file

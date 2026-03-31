@@ -89,7 +89,7 @@ final class UpdateController
         $repo = self::parseGitHubRepo($repoUrl);
 
         if (!$repo) {
-            Flash::add('error', 'Ungueltige Repository-URL in der Konfiguration.');
+            Flash::add('error', 'Ungültige Repository-URL in der Konfiguration.');
             header('Location: ' . App::url('/update'));
             exit;
         }
@@ -251,7 +251,7 @@ final class UpdateController
         }
 
         if ($httpCode !== 200) {
-            throw new \RuntimeException("GitHub API Fehler (HTTP {$httpCode}). Bitte Token und Repository-URL pruefen.");
+            throw new \RuntimeException("GitHub API Fehler (HTTP {$httpCode}). Bitte Token und Repository-URL prüfen.");
         }
 
         if (file_put_contents($tmpFile, $body) === false) {
@@ -303,7 +303,7 @@ final class UpdateController
     {
         $zip = new \ZipArchive();
         if ($zip->open($zipPath) !== true) {
-            throw new \RuntimeException('ZIP-Datei konnte nicht geoeffnet werden.');
+            throw new \RuntimeException('ZIP-Datei konnte nicht geöffnet werden.');
         }
 
         // GitHub ZIPs have a top-level directory like "owner-repo-sha/"
