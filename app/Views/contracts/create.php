@@ -61,11 +61,40 @@ use App\Support\App;
     <div class="row" style="margin-top:8px;">
       <div>
         <label>Kontaktname</label>
-        <input type="text" name="contact_name" placeholder="Name des Vertragspartners">
+        <input type="text" name="contact_name" id="contact_name" placeholder="Name des Vertragspartners">
       </div>
       <div>
         <label>E-Mail (optional)</label>
-        <input type="email" name="contact_email" placeholder="email@example.com">
+        <input type="email" name="contact_email" id="contact_email" placeholder="email@example.com">
+      </div>
+    </div>
+
+    <hr style="margin:16px 0; border:0; border-top:1px solid #e5e7eb;">
+
+    <h2>Vertragspartner (Mandant)</h2>
+    <p class="muted">Diese Daten werden im Vertrag als Platzhalter eingesetzt und im Signierformular vorausgefüllt.</p>
+    <div class="row" style="margin-top:8px;">
+      <div>
+        <label>Vollständiger Name</label>
+        <input type="text" name="signer_name" id="signer_name" placeholder="Max Mustermann">
+      </div>
+      <div>
+        <label>Strasse und Hausnummer</label>
+        <input type="text" name="signer_street" id="signer_street" placeholder="Musterstrasse 1">
+      </div>
+    </div>
+    <div class="row" style="margin-top:8px;">
+      <div>
+        <label>PLZ</label>
+        <input type="text" name="signer_zip" id="signer_zip" placeholder="12345">
+      </div>
+      <div>
+        <label>Ort</label>
+        <input type="text" name="signer_city" id="signer_city" placeholder="Musterstadt">
+      </div>
+      <div>
+        <label>Land</label>
+        <input type="text" name="signer_country" id="signer_country" value="DE" maxlength="2" placeholder="DE">
       </div>
     </div>
 
@@ -139,6 +168,41 @@ if (toolbarEl) {
   span.className = 'ql-formats';
   span.appendChild(htmlBtn);
   toolbarEl.appendChild(span);
+}
+
+// Auto-fill signer fields from sevdesk contact
+var contactSelect = document.getElementById('contact_select');
+if (contactSelect) {
+  contactSelect.addEventListener('change', function() {
+    var id = this.value;
+    if (!id) return;
+    fetch('<?php echo App::url('/contracts/contact/'); ?>' + id, { credentials: 'same-origin' })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.name && !document.getElementById('contact_name').value) {
+          document.getElementById('contact_name').value = d.name;
+        }
+        if (d.email && !document.getElementById('contact_email').value) {
+          document.getElementById('contact_email').value = d.email;
+        }
+        if (d.name && !document.getElementById('signer_name').value) {
+          document.getElementById('signer_name').value = d.name;
+        }
+        if (d.street && !document.getElementById('signer_street').value) {
+          document.getElementById('signer_street').value = d.street;
+        }
+        if (d.zip && !document.getElementById('signer_zip').value) {
+          document.getElementById('signer_zip').value = d.zip;
+        }
+        if (d.city && !document.getElementById('signer_city').value) {
+          document.getElementById('signer_city').value = d.city;
+        }
+        if (d.country) {
+          document.getElementById('signer_country').value = d.country;
+        }
+      })
+      .catch(function() {});
+  });
 }
 
 // Sync editor content to hidden input on submit
