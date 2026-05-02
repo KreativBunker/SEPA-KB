@@ -45,6 +45,15 @@ elseif ($status === 'draft') { $statusClass = ''; $statusLabel = 'Entwurf'; }
       <?php if (!empty($item['cancellation_reason'])): ?>
         <tr><th>Begründung</th><td><?php echo nl2br(htmlspecialchars((string)$item['cancellation_reason'])); ?></td></tr>
       <?php endif; ?>
+      <?php if ((int)($item['include_sepa'] ?? 0)): ?>
+        <tr><th>SEPA-Mandat</th><td>
+          <?php if ((int)($item['sepa_cancelled'] ?? 0)): ?>
+            <span class="pill err">widerrufen</span>
+          <?php else: ?>
+            <span class="pill ok">bleibt bestehen</span>
+          <?php endif; ?>
+        </td></tr>
+      <?php endif; ?>
     <?php endif; ?>
   </table>
 
@@ -99,6 +108,14 @@ elseif ($status === 'draft') { $statusClass = ''; $statusLabel = 'Entwurf'; }
           <label for="cancellation_reason" style="display:block; font-size:13px; margin-bottom:4px;">Begründung (optional)</label>
           <textarea id="cancellation_reason" name="cancellation_reason" rows="3" style="width:100%;"></textarea>
         </div>
+        <?php if ((int)($item['include_sepa'] ?? 0)): ?>
+          <div style="margin-bottom:10px;">
+            <label style="display:flex; align-items:flex-start; gap:8px; font-size:13px;">
+              <input type="checkbox" id="cancel_sepa" name="cancel_sepa" value="1" checked style="margin-top:3px;">
+              <span>SEPA-Lastschriftmandat ebenfalls widerrufen<br><span class="muted" style="font-size:12px;">Mandatsreferenz: <?php echo htmlspecialchars((string)($item['mandate_reference'] ?? '')); ?></span></span>
+            </label>
+          </div>
+        <?php endif; ?>
         <button class="btn danger" type="submit" onclick="return confirm('Vertrag jetzt kündigen? Eine Kündigungs-PDF wird erstellt.');">Kündigung erfassen</button>
       </form>
     </details>

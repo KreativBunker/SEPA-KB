@@ -640,6 +640,7 @@ final class SimplePdf
         }
 
         $mandateRef = trim((string)($data['mandate_reference'] ?? ''));
+        $sepaCancelled = !empty($data['sepa_cancelled']);
 
         $pdf = new \TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
         $pdf->setPrintHeader(false);
@@ -709,8 +710,10 @@ final class SimplePdf
         }
         $body .= ' fristgerecht zum ' . ($cancellationDate !== '' ? $cancellationDate : $today) . '.';
 
-        if ($mandateRef !== '') {
+        if ($mandateRef !== '' && $sepaCancelled) {
             $body .= "\n\n" . 'Das zugehörige SEPA-Lastschriftmandat mit der Mandatsreferenz ' . $mandateRef . ' wird mit Wirkung zum genannten Datum widerrufen. Es werden nach diesem Datum keine weiteren Lastschriften mehr eingezogen.';
+        } elseif ($mandateRef !== '') {
+            $body .= "\n\n" . 'Das erteilte SEPA-Lastschriftmandat (Mandatsreferenz ' . $mandateRef . ') bleibt von dieser Vertragskündigung unberührt und besteht fort.';
         }
 
         if ($reason !== '') {
@@ -751,6 +754,7 @@ final class SimplePdf
         $pdf->Cell(0, 4, 'Beendigung zum: ' . ($cancellationDate !== '' ? $cancellationDate : $today), 0, 1, 'L');
         if ($mandateRef !== '') {
             $pdf->Cell(0, 4, 'Mandatsreferenz: ' . $mandateRef, 0, 1, 'L');
+            $pdf->Cell(0, 4, 'SEPA-Mandat: ' . ($sepaCancelled ? 'wird widerrufen' : 'bleibt bestehen'), 0, 1, 'L');
         }
         $cancelledAtRaw = trim((string)($data['cancelled_at'] ?? ''));
         if ($cancelledAtRaw !== '') {
