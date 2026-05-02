@@ -601,4 +601,174 @@ final class SimplePdf
 
         $pdf->Output($outPath, 'F');
     }
+
+    /**
+     * Generate a contract cancellation PDF (Kündigungsschreiben).
+     */
+    public static function createCancellationPdf(array $data, string $outPath): void
+    {
+        $title = (string)($data['title'] ?? 'Vertrag');
+        $contractId = (string)($data['contract_id'] ?? '');
+        $signerName = trim((string)($data['signer_name'] ?? ($data['contact_name'] ?? '')));
+        $signerStreet = trim((string)($data['signer_street'] ?? ''));
+        $signerZip = trim((string)($data['signer_zip'] ?? ''));
+        $signerCity = trim((string)($data['signer_city'] ?? ''));
+
+        $creditorName = trim((string)($data['creditor_name'] ?? ''));
+        $creditorStreet = trim((string)($data['creditor_street'] ?? ''));
+        $creditorZip = trim((string)($data['creditor_zip'] ?? ''));
+        $creditorCity = trim((string)($data['creditor_city'] ?? ''));
+
+        $reason = trim((string)($data['cancellation_reason'] ?? ''));
+
+        $cancellationDateRaw = trim((string)($data['cancellation_date'] ?? ''));
+        $cancellationDate = $cancellationDateRaw;
+        if ($cancellationDateRaw !== '') {
+            $d = \DateTimeImmutable::createFromFormat('Y-m-d', $cancellationDateRaw);
+            if ($d instanceof \DateTimeImmutable) {
+                $cancellationDate = $d->format('d.m.Y');
+            }
+        }
+
+        $signedDateRaw = trim((string)($data['signed_date'] ?? ''));
+        $signedDate = $signedDateRaw;
+        if ($signedDateRaw !== '') {
+            $d = \DateTimeImmutable::createFromFormat('Y-m-d', $signedDateRaw);
+            if ($d instanceof \DateTimeImmutable) {
+                $signedDate = $d->format('d.m.Y');
+            }
+        }
+
+        $mandateRef = trim((string)($data['mandate_reference'] ?? ''));
+
+        $pdf = new \TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+        $pdf->SetMargins(20, 20, 20);
+        $pdf->SetAutoPageBreak(true, 20);
+        $pdf->SetFont('helvetica', '', 11);
+        $pdf->AddPage();
+
+        // Sender (creditor) – top right
+        $pdf->SetFont('helvetica', '', 9);
+        $senderLines = array_filter([
+            $creditorName,
+            $creditorStreet,
+            trim($creditorZip . ' ' . $creditorCity),
+        ]);
+        if (!empty($senderLines)) {
+            $pdf->SetXY(120, 20);
+            $pdf->MultiCell(70, 4, implode("\n", $senderLines), 0, 'R');
+        }
+
+        // Recipient (signer) – left block
+        $pdf->SetXY(20, 45);
+        $pdf->SetFont('helvetica', '', 11);
+        $recipientLines = array_filter([
+            $signerName,
+            $signerStreet,
+            trim($signerZip . ' ' . $signerCity),
+        ]);
+        if (!empty($recipientLines)) {
+            $pdf->MultiCell(90, 5, implode("\n", $recipientLines), 0, 'L');
+        }
+
+        // Date – right
+        $today = date('d.m.Y');
+        $pdf->SetXY(140, 75);
+        $pdf->Cell(50, 5, ($creditorCity !== '' ? $creditorCity . ', ' : '') . 'den ' . $today, 0, 1, 'R');
+
+        // Subject
+        $pdf->SetXY(20, 95);
+        $pdf->SetFont('helvetica', 'B', 13);
+        $subject = 'Kündigung Ihres Vertrags';
+        if ($contractId !== '') {
+            $subject .= ' Nr. ' . $contractId;
+        }
+        $pdf->Cell(0, 7, $subject, 0, 1, 'L');
+
+        if ($title !== '') {
+            $pdf->SetFont('helvetica', '', 11);
+            $pdf->SetTextColor(80, 80, 80);
+            $pdf->Cell(0, 5, 'Vertrag: ' . $title, 0, 1, 'L');
+            $pdf->SetTextColor(0, 0, 0);
+        }
+
+        $pdf->Ln(6);
+
+        // Salutation
+        $pdf->SetFont('helvetica', '', 11);
+        $salutation = $signerName !== '' ? 'Sehr geehrte/r ' . $signerName . ',' : 'Sehr geehrte Damen und Herren,';
+        $pdf->Cell(0, 6, $salutation, 0, 1, 'L');
+        $pdf->Ln(3);
+
+        // Body
+        $body = 'hiermit kündigen wir den oben genannten Vertrag';
+        if ($signedDate !== '') {
+            $body .= ' (abgeschlossen am ' . $signedDate . ')';
+        }
+        $body .= ' fristgerecht zum ' . ($cancellationDate !== '' ? $cancellationDate : $today) . '.';
+
+        if ($mandateRef !== '') {
+            $body .= "\n\n" . 'Das zugehörige SEPA-Lastschriftmandat mit der Mandatsreferenz ' . $mandateRef . ' wird mit Wirkung zum genannten Datum widerrufen. Es werden nach diesem Datum keine weiteren Lastschriften mehr eingezogen.';
+        }
+
+        if ($reason !== '') {
+            $body .= "\n\n" . 'Begründung: ' . $reason;
+        }
+
+        $body .= "\n\n" . 'Bitte bestätigen Sie uns den Eingang dieser Kündigung sowie das Beendigungsdatum schriftlich.';
+        $body .= "\n\n" . 'Mit freundlichen Grüßen';
+
+        $pdf->MultiCell(0, 6, $body, 0, 'L', false, 1, '', '', true, 0, false, true, 0, 'T');
+
+        $pdf->Ln(12);
+
+        // Signature line
+        if ($creditorName !== '') {
+            $pdf->SetFont('helvetica', '', 11);
+            $pdf->Cell(0, 6, $creditorName, 0, 1, 'L');
+        }
+
+        // Footer summary
+        $pdf->Ln(10);
+        $pdf->SetDrawColor(200, 200, 200);
+        $pdf->SetLineWidth(0.2);
+        $y = $pdf->GetY();
+        $pdf->Line(20, $y, 190, $y);
+        $pdf->Ln(2);
+
+        $pdf->SetFont('helvetica', 'B', 8);
+        $pdf->Cell(0, 4, 'Kündigungsdetails', 0, 1, 'L');
+        $pdf->SetFont('helvetica', '', 8);
+        $pdf->SetTextColor(100, 100, 100);
+        if ($contractId !== '') {
+            $pdf->Cell(0, 4, 'Vertragsnummer: ' . $contractId, 0, 1, 'L');
+        }
+        if ($signedDate !== '') {
+            $pdf->Cell(0, 4, 'Vertragsbeginn: ' . $signedDate, 0, 1, 'L');
+        }
+        $pdf->Cell(0, 4, 'Beendigung zum: ' . ($cancellationDate !== '' ? $cancellationDate : $today), 0, 1, 'L');
+        if ($mandateRef !== '') {
+            $pdf->Cell(0, 4, 'Mandatsreferenz: ' . $mandateRef, 0, 1, 'L');
+        }
+        $cancelledAtRaw = trim((string)($data['cancelled_at'] ?? ''));
+        if ($cancelledAtRaw !== '') {
+            $obj = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $cancelledAtRaw);
+            $cancelledAt = $obj instanceof \DateTimeImmutable ? $obj->format('d.m.Y H:i') : $cancelledAtRaw;
+            $pdf->Cell(0, 4, 'Kündigung erfasst: ' . $cancelledAt, 0, 1, 'L');
+        }
+        $cancelledByName = trim((string)($data['cancelled_by_name'] ?? ''));
+        if ($cancelledByName !== '') {
+            $pdf->Cell(0, 4, 'Erfasst durch: ' . $cancelledByName, 0, 1, 'L');
+        }
+        $pdf->SetTextColor(0, 0, 0);
+
+        $dir = dirname($outPath);
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
+
+        $pdf->Output($outPath, 'F');
+    }
 }

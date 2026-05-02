@@ -32,6 +32,7 @@ use App\Support\App;
             if ($status === 'signed') { $statusClass = 'ok'; $statusLabel = 'Unterschrieben'; }
             elseif ($status === 'open') { $statusClass = 'warn'; $statusLabel = 'Offen'; }
             elseif ($status === 'revoked') { $statusClass = 'err'; $statusLabel = 'Widerrufen'; }
+            elseif ($status === 'cancelled') { $statusClass = 'err'; $statusLabel = 'Gekündigt'; }
             elseif ($status === 'draft') { $statusClass = ''; $statusLabel = 'Entwurf'; }
           ?>
           <tr>
@@ -48,10 +49,13 @@ use App\Support\App;
             <td class="muted"><?php echo htmlspecialchars(\App\Support\DateFormatter::toDisplay((string)($c['created_at'] ?? ''))); ?></td>
             <td class="muted"><?php echo htmlspecialchars(\App\Support\DateFormatter::toDisplay((string)($c['signed_at'] ?? ''))); ?></td>
             <td>
-              <?php if ($status === 'signed'): ?>
+              <?php if ($status === 'signed' || $status === 'cancelled'): ?>
                 <a href="<?php echo App::url('/contracts/' . (int)$c['id'] . '/pdf'); ?>" class="btn inline">Vertrag-PDF</a>
                 <?php if ((int)($c['include_sepa'] ?? 0)): ?>
                   <a href="<?php echo App::url('/contracts/' . (int)$c['id'] . '/sepa-pdf'); ?>" class="btn inline">SEPA-PDF</a>
+                <?php endif; ?>
+                <?php if ($status === 'cancelled'): ?>
+                  <a href="<?php echo App::url('/contracts/' . (int)$c['id'] . '/cancellation-pdf'); ?>" class="btn inline">Kündigung-PDF</a>
                 <?php endif; ?>
               <?php else: ?>
                 <a href="<?php echo App::url('/contracts/' . (int)$c['id'] . '/edit'); ?>" class="btn inline secondary">Bearbeiten</a>
