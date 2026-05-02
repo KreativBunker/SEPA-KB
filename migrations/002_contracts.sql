@@ -51,3 +51,37 @@ CREATE TABLE IF NOT EXISTS contracts (
     KEY ix_contracts_template (template_id),
     KEY ix_contracts_contact (sevdesk_contact_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS contract_template_fields (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    template_id BIGINT UNSIGNED NOT NULL,
+    field_key VARCHAR(64) NOT NULL,
+    label VARCHAR(190) NOT NULL,
+    field_type ENUM('text','textarea','number','date','email') NOT NULL DEFAULT 'text',
+    fill_by ENUM('admin','customer') NOT NULL DEFAULT 'admin',
+    required TINYINT(1) NOT NULL DEFAULT 0,
+    default_value TEXT NULL,
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_tpl_field (template_id, field_key),
+    KEY ix_tpl_field_template (template_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS contract_field_values (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    contract_id BIGINT UNSIGNED NOT NULL,
+    field_key VARCHAR(64) NOT NULL,
+    label VARCHAR(190) NOT NULL,
+    field_type ENUM('text','textarea','number','date','email') NOT NULL DEFAULT 'text',
+    fill_by ENUM('admin','customer') NOT NULL DEFAULT 'admin',
+    required TINYINT(1) NOT NULL DEFAULT 0,
+    value TEXT NULL,
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_contract_field (contract_id, field_key),
+    KEY ix_contract_field_contract (contract_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

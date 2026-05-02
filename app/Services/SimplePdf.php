@@ -470,6 +470,16 @@ final class SimplePdf
         ];
         $bodyHtml = str_replace(array_keys($placeholders), array_values($placeholders), $bodyHtml);
 
+        // Custom (template-defined) placeholders
+        $customFields = isset($data['custom_fields']) && is_array($data['custom_fields']) ? $data['custom_fields'] : [];
+        foreach ($customFields as $cKey => $cVal) {
+            $cKey = (string)$cKey;
+            if ($cKey === '') {
+                continue;
+            }
+            $bodyHtml = str_replace('{{' . $cKey . '}}', htmlspecialchars((string)$cVal), $bodyHtml);
+        }
+
         // Sanitize HTML: only allow safe tags
         $bodyHtml = strip_tags($bodyHtml, '<b><i><u><strong><em><h1><h2><h3><p><br><ul><ol><li><a><span><div>');
 

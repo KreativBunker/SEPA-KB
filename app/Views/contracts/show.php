@@ -73,6 +73,33 @@ elseif ($status === 'draft') { $statusClass = ''; $statusLabel = 'Entwurf'; }
     </details>
   <?php endif; ?>
 
+  <?php $contractFields = isset($contractFields) && is_array($contractFields) ? $contractFields : []; ?>
+  <?php if (!empty($contractFields)): ?>
+    <details style="margin-top:14px;" open>
+      <summary style="cursor:pointer; font-weight:600;">Variable Felder</summary>
+      <table style="margin-top:8px;">
+        <thead><tr><th>Feld</th><th>Platzhalter</th><th>Wer füllt aus</th><th>Wert</th></tr></thead>
+        <tbody>
+        <?php foreach ($contractFields as $cf): ?>
+          <tr>
+            <td><?php echo htmlspecialchars((string)$cf['label']); ?><?php if ((int)($cf['required'] ?? 0) === 1): ?> *<?php endif; ?></td>
+            <td><code>{{<?php echo htmlspecialchars((string)$cf['field_key']); ?>}}</code></td>
+            <td><?php echo (string)($cf['fill_by'] ?? '') === 'customer' ? 'Kunde' : 'Admin'; ?></td>
+            <td>
+              <?php $val = (string)($cf['value'] ?? ''); ?>
+              <?php if ($val === ''): ?>
+                <span class="muted">— offen —</span>
+              <?php else: ?>
+                <?php echo nl2br(htmlspecialchars($val)); ?>
+              <?php endif; ?>
+            </td>
+          </tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+    </details>
+  <?php endif; ?>
+
   <div class="actions" style="margin-top: 14px;">
     <?php if (($status === 'signed' || $status === 'cancelled') && !empty($item['signature_path'])): ?>
       <a class="btn" href="<?php echo App::url('/contracts/' . (int)$item['id'] . '/pdf'); ?>">Vertrag (PDF)</a>

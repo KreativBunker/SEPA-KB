@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Repositories\ContractTemplateFieldRepository;
 use App\Repositories\ContractTemplateRepository;
 use App\Support\Auth;
 use App\Support\App;
@@ -27,6 +28,7 @@ final class ContractTemplatesController
     {
         View::render('contract_templates/form', [
             'template' => null,
+            'fields' => [],
             'csrf' => Csrf::token(),
         ]);
     }
@@ -60,6 +62,8 @@ final class ContractTemplatesController
             'created_by' => $user ? (int)$user['id'] : null,
         ]);
 
+        (new ContractTemplateFieldRepository())->replaceForTemplate($id, $this->parseFieldsInput($_POST));
+
         Flash::add('success', 'Vorlage erstellt.');
         header('Location: ' . App::url('/contract-templates'));
         exit;
@@ -77,8 +81,11 @@ final class ContractTemplatesController
             exit;
         }
 
+        $fields = (new ContractTemplateFieldRepository())->forTemplate($id);
+
         View::render('contract_templates/form', [
             'template' => $template,
+            'fields' => $fields,
             'csrf' => Csrf::token(),
         ]);
     }
@@ -119,6 +126,8 @@ final class ContractTemplatesController
             'is_active' => $isActive,
         ]);
 
+        (new ContractTemplateFieldRepository())->replaceForTemplate($id, $this->parseFieldsInput($_POST));
+
         Flash::add('success', 'Vorlage aktualisiert.');
         header('Location: ' . App::url('/contract-templates'));
         exit;
@@ -136,9 +145,44 @@ final class ContractTemplatesController
 
         $repo = new ContractTemplateRepository();
         $repo->delete($id);
+        (new ContractTemplateFieldRepository())->deleteForTemplate($id);
 
         Flash::add('success', 'Vorlage gelöscht.');
         header('Location: ' . App::url('/contract-templates'));
         exit;
+    }
+
+    /**
+     * Parse the parallel arrays posted by the dynamic field editor.
+     * Expected POST keys: field_keys[], field_labels[], field_types[],
+     * field_fill_by[], field_required[<index>], field_defaults[].
+     */
+    private function parseFieldsInput(array $post): array
+    {
+        $keys = (array)($post['field_keys'] ?? []);
+        $labels = (array)($post['field_labels'] ?? []);
+        $types = (array)($post['field_types'] ?? []);
+        $fillBy = (array)($post['field_fill_by'] ?? []);
+        $required = (array)($post['field_required'] ?? []);
+        $defaults = (array)($post['field_defaults'] ?? []);
+
+        $out = [];
+        $count = max(count($keys), count($labels));
+        for ($i = 0; $i < $count; $i++) {
+            $key = (string)($keys[$i] ?? '');
+            $label = (string)($labels[$i] ?? '');
+            if (trim($key) === '' && trim($label) === '') {
+                continue;
+            }
+            $out[] = [
+                'field_key' => $key,
+                'label' => $label,
+                'field_type' => (string)($types[$i] ?? 'text'),
+                'fill_by' => (string)($fillBy[$i] ?? 'admin'),
+                'required' => isset($required[$i]) ? (string)$required[$i] === '1' : false,
+                'default_value' => (string)($defaults[$i] ?? ''),
+            ];
+        }
+        return $out;
     }
 }
