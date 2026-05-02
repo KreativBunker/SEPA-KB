@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Repositories\ContractFieldValueRepository;
 use App\Repositories\ContractRepository;
 use App\Repositories\MandateRepository;
 use App\Repositories\SettingsRepository;
@@ -11,6 +12,7 @@ use App\Services\SevdeskClient;
 use App\Services\SimplePdf;
 use App\Services\ValidationService;
 use App\Support\App;
+use App\Support\ContractPlaceholders;
 use App\Support\Csrf;
 use App\Support\Flash;
 use App\Support\Logger;
@@ -32,36 +34,22 @@ final class PublicContractController
 
         $settings = (new SettingsRepository())->get();
 
-        // Resolve placeholders in contract body
-        $body = (string)($item['body'] ?? '');
-        $placeholders = [
-            '{{mandant_name}}' => (string)($item['signer_name'] ?? ''),
-            '{{mandant_strasse}}' => (string)($item['signer_street'] ?? ''),
-            '{{mandant_plz}}' => (string)($item['signer_zip'] ?? ''),
-            '{{mandant_ort}}' => (string)($item['signer_city'] ?? ''),
-            '{{mandant_land}}' => (string)($item['signer_country'] ?? 'DE'),
-            '{{firma}}' => (string)($settings['creditor_name'] ?? ''),
-            '{{firma_strasse}}' => (string)($settings['creditor_street'] ?? ''),
-            '{{firma_plz}}' => (string)($settings['creditor_zip'] ?? ''),
-            '{{firma_ort}}' => (string)($settings['creditor_city'] ?? ''),
-            '{{firma_land}}' => (string)($settings['creditor_country'] ?? ''),
-            '{{firma_iban}}' => (string)($settings['creditor_iban'] ?? ''),
-            '{{firma_bic}}' => (string)($settings['creditor_bic'] ?? ''),
-            '{{glaeubiger_id}}' => (string)($settings['creditor_id'] ?? ''),
-            '{{datum}}' => date('d.m.Y'),
-        ];
-        foreach ($placeholders as $key => $value) {
-            if ($value !== '') {
-                $body = str_replace($key, htmlspecialchars($value), $body);
-            }
-        }
-        $item['body'] = $body;
+        $valueRepo = new ContractFieldValueRepository();
+        $contractFields = $valueRepo->forContract((int)$item['id']);
+        $customValues = $valueRepo->valuesMap((int)$item['id']);
+
+        $item['body'] = ContractPlaceholders::apply((string)($item['body'] ?? ''), $item, $settings, $customValues);
+
+        $customerFields = array_values(array_filter($contractFields, static function (array $f): bool {
+            return (string)($f['fill_by'] ?? 'admin') === 'customer';
+        }));
 
         View::render('public/contract_sign', [
             'item' => $item,
             'settings' => $settings,
             'csrf' => Csrf::token(),
             'old' => $this->getOld($token),
+            'customerFields' => $customerFields,
         ]);
     }
 
@@ -90,6 +78,19 @@ final class PublicContractController
         $signedAt = date('Y-m-d H:i:s');
         $signedIp = trim((string)($_SERVER['REMOTE_ADDR'] ?? ''));
         $signedUserAgent = trim((string)($_SERVER['HTTP_USER_AGENT'] ?? ''));
+
+        // Customer-fillable custom fields
+        $valueRepo = new ContractFieldValueRepository();
+        $contractFields = $valueRepo->forContract((int)$item['id']);
+        $customerFields = array_values(array_filter($contractFields, static function (array $f): bool {
+            return (string)($f['fill_by'] ?? 'admin') === 'customer';
+        }));
+        $customInput = (array)($_POST['custom_fields'] ?? []);
+        $customerValues = [];
+        foreach ($customerFields as $f) {
+            $key = (string)$f['field_key'];
+            $customerValues[$key] = trim((string)($customInput[$key] ?? ''));
+        }
 
         // SEPA fields (optional even when contract is flagged include_sepa)
         $includeSepa = (int)($item['include_sepa'] ?? 0);
@@ -123,6 +124,7 @@ final class PublicContractController
             'debtor_iban' => $this->formatIbanDisplay($rawIban),
             'debtor_bic' => $rawBic,
             'payment_type' => $paymentType,
+            'custom_fields' => $customerValues,
         ]);
 
         // Validation
@@ -130,6 +132,19 @@ final class PublicContractController
             Flash::add('error', 'Bitte alle Pflichtfelder ausfüllen.');
             header('Location: ' . App::url('/c/' . $token));
             exit;
+        }
+
+        // Validate required customer-fillable custom fields
+        foreach ($customerFields as $f) {
+            if ((int)($f['required'] ?? 0) !== 1) {
+                continue;
+            }
+            $key = (string)$f['field_key'];
+            if (($customerValues[$key] ?? '') === '') {
+                Flash::add('error', 'Bitte Pflichtfeld "' . (string)$f['label'] . '" ausfüllen.');
+                header('Location: ' . App::url('/c/' . $token));
+                exit;
+            }
         }
 
         if ($includeSepa && $sepaProvided) {
@@ -183,6 +198,12 @@ final class PublicContractController
 
         $settings = (new SettingsRepository())->get();
 
+        // Persist customer-fillable custom field values BEFORE building the PDF
+        if (!empty($customerValues)) {
+            $valueRepo->updateValues((int)$item['id'], $customerValues);
+        }
+        $allCustomValues = $valueRepo->valuesMap((int)$item['id']);
+
         try {
             SimplePdf::createContractPdf([
                 'title' => (string)($item['title'] ?? ''),
@@ -206,6 +227,7 @@ final class PublicContractController
                 'signed_at' => $signedAt,
                 'signed_ip' => $signedIp,
                 'signed_user_agent' => $signedUserAgent,
+                'custom_fields' => $allCustomValues,
             ], $sigFile, $pdfFile);
         } catch (\Throwable $e) {
             Logger::error('Contract PDF Erstellung fehlgeschlagen', $e);
@@ -376,6 +398,7 @@ final class PublicContractController
                 'signed_at' => (string)($item['signed_at'] ?? ''),
                 'signed_ip' => (string)($item['signed_ip'] ?? ''),
                 'signed_user_agent' => (string)($item['signed_user_agent'] ?? ''),
+                'custom_fields' => (new ContractFieldValueRepository())->valuesMap((int)$item['id']),
             ], $sigFile, $pdfFile);
 
             $repo->updatePdfPath((int)$item['id'], $pdfRel);

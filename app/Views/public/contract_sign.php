@@ -4,6 +4,8 @@ use App\Support\Flash;
 
 $old = $old ?? [];
 $includeSepa = (int)($item['include_sepa'] ?? 0);
+$customerFields = isset($customerFields) && is_array($customerFields) ? $customerFields : [];
+$customerOld = (array)($old['custom_fields'] ?? []);
 ?>
 <div class="card">
   <h1 style="margin-top:0;"><?php echo htmlspecialchars((string)($item['title'] ?? 'Vertrag')); ?></h1>
@@ -58,6 +60,32 @@ $includeSepa = (int)($item['include_sepa'] ?? 0);
         <input type="text" name="signer_country" value="<?php echo htmlspecialchars((string)($old['signer_country'] ?? $item['signer_country'] ?? 'DE')); ?>" maxlength="2">
       </div>
     </div>
+
+    <?php if (!empty($customerFields)): ?>
+    <h2 style="margin-top:18px;">Weitere Angaben</h2>
+    <p class="muted" style="margin-top:0;">Bitte füllen Sie die folgenden Angaben aus.</p>
+    <div class="grid" style="margin-top:8px;">
+      <?php foreach ($customerFields as $cf):
+        $key = (string)$cf['field_key'];
+        $type = (string)$cf['field_type'];
+        $required = (int)($cf['required'] ?? 0) === 1;
+        $existing = (string)($cf['value'] ?? '');
+        $value = isset($customerOld[$key]) ? (string)$customerOld[$key] : $existing;
+        $name = 'custom_fields[' . $key . ']';
+      ?>
+        <div<?php if ($type === 'textarea'): ?> style="grid-column: 1 / -1;"<?php endif; ?>>
+          <label><?php echo htmlspecialchars((string)$cf['label']); ?><?php if ($required): ?> *<?php endif; ?></label>
+          <?php if ($type === 'textarea'): ?>
+            <textarea name="<?php echo htmlspecialchars($name); ?>" rows="3" style="width:100%;"<?php if ($required): ?> required<?php endif; ?>><?php echo htmlspecialchars($value); ?></textarea>
+          <?php else:
+            $inputType = in_array($type, ['text','number','date','email'], true) ? $type : 'text';
+          ?>
+            <input type="<?php echo htmlspecialchars($inputType); ?>" name="<?php echo htmlspecialchars($name); ?>" value="<?php echo htmlspecialchars($value); ?>"<?php if ($required): ?> required<?php endif; ?>>
+          <?php endif; ?>
+        </div>
+      <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
 
     <?php if ($includeSepa): ?>
     <h2 style="margin-top:18px;">SEPA-Lastschriftmandat <span style="font-weight:400; color:#6b7280; font-size:0.75em;">(optional, empfohlen)</span></h2>

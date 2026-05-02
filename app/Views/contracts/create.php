@@ -15,16 +15,31 @@ use App\Support\App;
     <label>Vorlage</label>
     <select name="template_id" id="template_select">
       <option value="">-- Keine Vorlage (Freitext) --</option>
-      <?php foreach ($templates as $t): ?>
-        <option value="<?php echo (int)$t['id']; ?>"
+      <?php foreach ($templates as $t):
+        $tid = (int)$t['id'];
+        $tplFields = isset($templateFields[$tid]) && is_array($templateFields[$tid]) ? $templateFields[$tid] : [];
+      ?>
+        <option value="<?php echo $tid; ?>"
           data-title="<?php echo htmlspecialchars((string)($t['title'] ?? '')); ?>"
           data-body="<?php echo htmlspecialchars((string)($t['body'] ?? '')); ?>"
-          data-sepa="<?php echo (int)($t['include_sepa'] ?? 0); ?>">
+          data-sepa="<?php echo (int)($t['include_sepa'] ?? 0); ?>"
+          data-fields='<?php echo htmlspecialchars(json_encode(array_map(static function (array $f): array {
+              return [
+                'field_key' => (string)($f['field_key'] ?? ''),
+                'label' => (string)($f['label'] ?? ''),
+                'field_type' => (string)($f['field_type'] ?? 'text'),
+                'fill_by' => (string)($f['fill_by'] ?? 'admin'),
+                'required' => (int)($f['required'] ?? 0) === 1,
+                'default_value' => (string)($f['default_value'] ?? ''),
+              ];
+          }, $tplFields), JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE), ENT_QUOTES); ?>'>
           <?php echo htmlspecialchars((string)($t['title'] ?? '')); ?>
           <?php if ((int)($t['include_sepa'] ?? 0)): ?>(inkl. SEPA)<?php endif; ?>
         </option>
       <?php endforeach; ?>
     </select>
+
+    <div id="custom-admin-fields" style="margin-top:10px;"></div>
 
     <label>Titel</label>
     <input type="text" name="title" id="contract_title" required placeholder="Vertragstitel">
@@ -120,6 +135,46 @@ var quill = new Quill('#editor-container', {
   }
 });
 
+function renderAdminFields(fields) {
+  var box = document.getElementById('custom-admin-fields');
+  box.innerHTML = '';
+  var adminFields = (fields || []).filter(function(f) { return f.fill_by === 'admin'; });
+  var customerFields = (fields || []).filter(function(f) { return f.fill_by === 'customer'; });
+
+  if (adminFields.length === 0 && customerFields.length === 0) return;
+
+  var html = '<div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; padding:12px; margin-top:10px;">';
+  if (adminFields.length > 0) {
+    html += '<h2 style="margin:0 0 8px 0; font-size:18px;">Variable Felder (von Ihnen auszufüllen)</h2>';
+    adminFields.forEach(function(f) {
+      var name = 'custom_fields[' + f.field_key + ']';
+      var labelHtml = escAttr(f.label) + (f.required ? ' <span style="color:#dc2626;">*</span>' : '') + ' <code style="font-weight:400; color:#6b7280;">{{' + escAttr(f.field_key) + '}}</code>';
+      html += '<div style="margin-bottom:8px;"><label>' + labelHtml + '</label>';
+      var val = escAttr(f.default_value || '');
+      if (f.field_type === 'textarea') {
+        html += '<textarea name="' + name + '"' + (f.required ? ' required' : '') + ' rows="3" style="width:100%;">' + val + '</textarea>';
+      } else {
+        var inputType = (['text','number','date','email'].indexOf(f.field_type) !== -1) ? f.field_type : 'text';
+        html += '<input type="' + inputType + '" name="' + name + '" value="' + val + '"' + (f.required ? ' required' : '') + '>';
+      }
+      html += '</div>';
+    });
+  }
+  if (customerFields.length > 0) {
+    html += '<p class="muted" style="margin:6px 0 0 0;">Diese Felder werden vom Kunden beim Unterschreiben ausgefüllt: ';
+    html += customerFields.map(function(f) { return '<code>{{' + escAttr(f.field_key) + '}}</code>'; }).join(', ');
+    html += '</p>';
+  }
+  html += '</div>';
+  box.innerHTML = html;
+}
+
+function escAttr(v) {
+  return (v || '').toString()
+    .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 // Template selection loads content into Quill
 var tplSelect = document.getElementById('template_select');
 if (tplSelect) {
@@ -134,6 +189,11 @@ if (tplSelect) {
         quill.setText(bodyContent);
       }
       document.getElementById('include_sepa_cb').checked = opt.dataset.sepa === '1';
+      var fields = [];
+      try { fields = JSON.parse(opt.dataset.fields || '[]'); } catch (e) { fields = []; }
+      renderAdminFields(fields);
+    } else {
+      renderAdminFields([]);
     }
   });
 }

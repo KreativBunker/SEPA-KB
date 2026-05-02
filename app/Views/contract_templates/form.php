@@ -5,6 +5,7 @@ $title = $isEdit ? (string)($template['title'] ?? '') : '';
 $body = $isEdit ? (string)($template['body'] ?? '') : '';
 $includeSepa = $isEdit ? (int)($template['include_sepa'] ?? 0) : 0;
 $isActive = $isEdit ? (int)($template['is_active'] ?? 1) : 1;
+$fields = isset($fields) && is_array($fields) ? $fields : [];
 ?>
 <link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">
 <div class="card">
@@ -27,7 +28,14 @@ $isActive = $isEdit ? (int)($template['is_active'] ?? 1) : 1;
     Platzhalter Firma: <code>{{firma}}</code>, <code>{{firma_strasse}}</code>, <code>{{firma_plz}}</code>, <code>{{firma_ort}}</code>, <code>{{firma_land}}</code>, <code>{{firma_iban}}</code>, <code>{{firma_bic}}</code>, <code>{{glaeubiger_id}}</code><br>
     Allgemein: <code>{{datum}}</code></p>
 
-    <div class="row" style="margin-top: 12px;">
+    <hr style="margin:18px 0; border:0; border-top:1px solid #e5e7eb;">
+    <h2 style="margin-bottom:6px;">Variable Felder</h2>
+    <p class="muted" style="margin-top:0;">Definieren Sie zusätzliche Platzhalter, die im Vertragstext mit <code>{{schluessel}}</code> verwendet werden können. Felder können entweder bei der Vertragserstellung (Admin) oder beim Unterschreiben durch den Kunden ausgefüllt werden.</p>
+
+    <div id="fields-container" style="margin-top:8px;"></div>
+    <button type="button" class="btn secondary" id="add-field-btn" style="margin-top:8px;">+ Feld hinzufügen</button>
+
+    <div class="row" style="margin-top: 18px;">
       <div>
         <label style="display:flex; align-items:center; gap:8px;">
           <input type="checkbox" name="include_sepa" value="1" <?php echo $includeSepa ? 'checked' : ''; ?> style="width:auto;">
@@ -52,6 +60,114 @@ $isActive = $isEdit ? (int)($template['is_active'] ?? 1) : 1;
 
 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.min.js"></script>
 <script>
+var existingFields = <?php echo json_encode(array_map(static function (array $f): array {
+    return [
+        'field_key' => (string)($f['field_key'] ?? ''),
+        'label' => (string)($f['label'] ?? ''),
+        'field_type' => (string)($f['field_type'] ?? 'text'),
+        'fill_by' => (string)($f['fill_by'] ?? 'admin'),
+        'required' => (int)($f['required'] ?? 0) === 1,
+        'default_value' => (string)($f['default_value'] ?? ''),
+    ];
+}, $fields), JSON_HEX_TAG | JSON_HEX_AMP); ?>;
+
+(function() {
+  var container = document.getElementById('fields-container');
+  var addBtn = document.getElementById('add-field-btn');
+
+  function sanitizeKey(v) {
+    return (v || '').toString().toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '').substring(0, 64);
+  }
+
+  function escAttr(v) {
+    return (v || '').toString()
+      .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function rowTemplate(idx, f) {
+    f = f || {};
+    var typeOpts = ['text','textarea','number','date','email'].map(function(t) {
+      var sel = (f.field_type || 'text') === t ? ' selected' : '';
+      return '<option value="' + t + '"' + sel + '>' + t + '</option>';
+    }).join('');
+    var fillOpts = [
+      ['admin','Admin (bei Vertragserstellung)'],
+      ['customer','Kunde (beim Unterschreiben)']
+    ].map(function(o) {
+      var sel = (f.fill_by || 'admin') === o[0] ? ' selected' : '';
+      return '<option value="' + o[0] + '"' + sel + '>' + o[1] + '</option>';
+    }).join('');
+    var req = f.required ? ' checked' : '';
+    return '<div class="field-row" data-idx="' + idx + '" style="border:1px solid #e5e7eb; border-radius:10px; padding:12px; margin-bottom:10px; background:#f9fafb;">'
+      + '<div class="row" style="gap:10px;">'
+      + '  <div style="flex:1;"><label style="font-size:12px;">Schlüssel (Platzhalter)</label>'
+      + '    <input type="text" name="field_keys[]" value="' + escAttr(f.field_key) + '" placeholder="z.B. vertragslaufzeit" required>'
+      + '    <div class="muted" style="font-size:12px; margin-top:4px;">Im Text: <code>{{<span class="key-preview">' + escAttr(f.field_key || 'schluessel') + '</span>}}</code></div>'
+      + '  </div>'
+      + '  <div style="flex:1;"><label style="font-size:12px;">Anzeige-Label</label>'
+      + '    <input type="text" name="field_labels[]" value="' + escAttr(f.label) + '" placeholder="z.B. Vertragslaufzeit (Monate)" required>'
+      + '  </div>'
+      + '</div>'
+      + '<div class="row" style="gap:10px; margin-top:8px;">'
+      + '  <div style="flex:1;"><label style="font-size:12px;">Feldtyp</label>'
+      + '    <select name="field_types[]">' + typeOpts + '</select>'
+      + '  </div>'
+      + '  <div style="flex:2;"><label style="font-size:12px;">Auszufüllen von</label>'
+      + '    <select name="field_fill_by[]">' + fillOpts + '</select>'
+      + '  </div>'
+      + '  <div style="flex:1;"><label style="font-size:12px;">Standardwert (optional)</label>'
+      + '    <input type="text" name="field_defaults[]" value="' + escAttr(f.default_value) + '">'
+      + '  </div>'
+      + '</div>'
+      + '<div style="display:flex; align-items:center; justify-content:space-between; margin-top:10px;">'
+      + '  <label style="display:flex; align-items:center; gap:6px; font-size:13px;">'
+      + '    <input type="hidden" name="field_required[]" value="0">'
+      + '    <input type="checkbox" class="req-cb" value="1"' + req + ' style="width:auto;"> Pflichtfeld'
+      + '  </label>'
+      + '  <button type="button" class="btn danger inline remove-field-btn">Entfernen</button>'
+      + '</div>'
+      + '</div>';
+  }
+
+  function bindRow(row) {
+    var keyInput = row.querySelector('input[name="field_keys[]"]');
+    var preview = row.querySelector('.key-preview');
+    keyInput.addEventListener('input', function() {
+      var sanitized = sanitizeKey(keyInput.value);
+      preview.textContent = sanitized || 'schluessel';
+    });
+    keyInput.addEventListener('blur', function() {
+      keyInput.value = sanitizeKey(keyInput.value);
+      preview.textContent = keyInput.value || 'schluessel';
+    });
+    var reqCb = row.querySelector('.req-cb');
+    var reqHidden = row.querySelector('input[name="field_required[]"]');
+    reqCb.addEventListener('change', function() {
+      reqHidden.value = reqCb.checked ? '1' : '0';
+    });
+    reqHidden.value = reqCb.checked ? '1' : '0';
+    row.querySelector('.remove-field-btn').addEventListener('click', function() {
+      row.remove();
+    });
+  }
+
+  function addRow(f) {
+    var idx = container.children.length;
+    var wrap = document.createElement('div');
+    wrap.innerHTML = rowTemplate(idx, f);
+    var row = wrap.firstChild;
+    container.appendChild(row);
+    bindRow(row);
+  }
+
+  if (Array.isArray(existingFields) && existingFields.length > 0) {
+    existingFields.forEach(function(f) { addRow(f); });
+  }
+
+  addBtn.addEventListener('click', function() { addRow(); });
+})();
+
 var quill = new Quill('#editor-container', {
   theme: 'snow',
   placeholder: 'Vertragstext hier eingeben...',

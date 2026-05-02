@@ -3,7 +3,9 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Repositories\ContractFieldValueRepository;
 use App\Repositories\ContractRepository;
+use App\Repositories\ContractTemplateFieldRepository;
 use App\Repositories\ContractTemplateRepository;
 use App\Repositories\SettingsRepository;
 use App\Repositories\SevdeskAccountRepository;
@@ -68,8 +70,15 @@ final class ContractsController
             });
         }
 
+        $fieldRepo = new ContractTemplateFieldRepository();
+        $templateFields = [];
+        foreach ($templates as $t) {
+            $templateFields[(int)$t['id']] = $fieldRepo->forTemplate((int)$t['id']);
+        }
+
         View::render('contracts/create', [
             'templates' => $templates,
+            'templateFields' => $templateFields,
             'contacts' => $contacts,
             'csrf' => Csrf::token(),
         ]);
@@ -99,6 +108,22 @@ final class ContractsController
         // Load template if selected
         $tplRepo = new ContractTemplateRepository();
         $template = $templateId > 0 ? $tplRepo->find($templateId) : null;
+        $templateFields = $template ? (new ContractTemplateFieldRepository())->forTemplate($templateId) : [];
+        $customInput = (array)($_POST['custom_fields'] ?? []);
+
+        // Validate required admin-fillable fields
+        foreach ($templateFields as $f) {
+            if ((string)($f['fill_by'] ?? 'admin') !== 'admin' || (int)($f['required'] ?? 0) !== 1) {
+                continue;
+            }
+            $key = (string)$f['field_key'];
+            $val = trim((string)($customInput[$key] ?? ''));
+            if ($val === '') {
+                Flash::add('error', 'Bitte Pflichtfeld "' . (string)$f['label'] . '" ausfüllen.');
+                header('Location: ' . App::url('/contracts/create'));
+                exit;
+            }
+        }
 
         if ($title === '' && $template) {
             $title = (string)($template['title'] ?? '');
@@ -200,6 +225,17 @@ final class ContractsController
             ]);
         }
 
+        if (!empty($templateFields)) {
+            $adminValues = [];
+            foreach ($templateFields as $f) {
+                $key = (string)$f['field_key'];
+                if ((string)($f['fill_by'] ?? 'admin') === 'admin') {
+                    $adminValues[$key] = trim((string)($customInput[$key] ?? ''));
+                }
+            }
+            (new ContractFieldValueRepository())->snapshotFromTemplate($id, $templateFields, $adminValues);
+        }
+
         Flash::add('success', 'Vertrag erstellt.');
         header('Location: ' . App::url('/contracts/' . $id));
         exit;
@@ -259,9 +295,18 @@ final class ContractsController
             });
         }
 
+        $fieldRepo = new ContractTemplateFieldRepository();
+        $templateFields = [];
+        foreach ($templates as $t) {
+            $templateFields[(int)$t['id']] = $fieldRepo->forTemplate((int)$t['id']);
+        }
+        $contractFields = (new ContractFieldValueRepository())->forContract((int)$item['id']);
+
         View::render('contracts/edit', [
             'item' => $item,
             'templates' => $templates,
+            'templateFields' => $templateFields,
+            'contractFields' => $contractFields,
             'contacts' => $contacts,
             'csrf' => Csrf::token(),
         ]);
@@ -353,6 +398,41 @@ final class ContractsController
             'mandate_reference' => $mandateRef,
         ]);
 
+        // Custom field values: re-snapshot from template if it changed, otherwise update admin values
+        $customInput = (array)($_POST['custom_fields'] ?? []);
+        $valueRepo = new ContractFieldValueRepository();
+        $previousTemplateId = (int)($item['template_id'] ?? 0);
+        $newTemplateId = $templateId > 0 ? $templateId : 0;
+
+        if ($newTemplateId !== $previousTemplateId) {
+            if ($newTemplateId > 0) {
+                $tplFields = (new ContractTemplateFieldRepository())->forTemplate($newTemplateId);
+                $adminValues = [];
+                foreach ($tplFields as $f) {
+                    if ((string)($f['fill_by'] ?? 'admin') === 'admin') {
+                        $key = (string)$f['field_key'];
+                        $adminValues[$key] = trim((string)($customInput[$key] ?? ''));
+                    }
+                }
+                $valueRepo->snapshotFromTemplate($id, $tplFields, $adminValues);
+            } else {
+                $valueRepo->deleteForContract($id);
+            }
+        } else {
+            $existingValues = $valueRepo->forContract($id);
+            $adminUpdates = [];
+            foreach ($existingValues as $fv) {
+                if ((string)($fv['fill_by'] ?? 'admin') !== 'admin') {
+                    continue;
+                }
+                $key = (string)$fv['field_key'];
+                $adminUpdates[$key] = trim((string)($customInput[$key] ?? ''));
+            }
+            if (!empty($adminUpdates)) {
+                $valueRepo->updateValues($id, $adminUpdates);
+            }
+        }
+
         Flash::add('success', 'Vertrag aktualisiert.');
         header('Location: ' . App::url('/contracts/' . $id));
         exit;
@@ -371,10 +451,12 @@ final class ContractsController
         }
 
         $publicUrl = App::url('/c/' . (string)$item['token']);
+        $contractFields = (new ContractFieldValueRepository())->forContract((int)$item['id']);
 
         View::render('contracts/show', [
             'item' => $item,
             'publicUrl' => $publicUrl,
+            'contractFields' => $contractFields,
             'csrf' => Csrf::token(),
         ]);
     }
@@ -591,6 +673,7 @@ final class ContractsController
             }
         }
 
+        (new ContractFieldValueRepository())->deleteForContract($id);
         $repo->delete($id);
 
         Flash::add('success', 'Vertrag gelöscht.');
@@ -654,6 +737,7 @@ final class ContractsController
                 'signed_at' => (string)($item['signed_at'] ?? ''),
                 'signed_ip' => (string)($item['signed_ip'] ?? ''),
                 'signed_user_agent' => (string)($item['signed_user_agent'] ?? ''),
+                'custom_fields' => (new ContractFieldValueRepository())->valuesMap((int)$item['id']),
             ], $sigFile, $pdfFile);
 
             $repo->updatePdfPath($id, $pdfRel);
