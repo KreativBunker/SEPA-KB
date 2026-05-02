@@ -91,12 +91,14 @@ final class PublicContractController
         $signedIp = trim((string)($_SERVER['REMOTE_ADDR'] ?? ''));
         $signedUserAgent = trim((string)($_SERVER['HTTP_USER_AGENT'] ?? ''));
 
-        // SEPA fields
+        // SEPA fields (optional even when contract is flagged include_sepa)
         $includeSepa = (int)($item['include_sepa'] ?? 0);
         $rawIban = '';
+        $rawBic = '';
         $debtorIban = '';
         $debtorBic = '';
         $paymentType = '';
+        $sepaProvided = false;
         if ($includeSepa) {
             $rawIban = trim((string)($_POST['debtor_iban'] ?? ''));
             $debtorIban = strtoupper($rawIban);
@@ -106,6 +108,7 @@ final class PublicContractController
             $debtorBic = preg_replace('/[^A-Z0-9]/', '', $debtorBic) ?: '';
             $rawPaymentType = trim((string)($_POST['payment_type'] ?? ''));
             $paymentType = in_array($rawPaymentType, ['OOFF', 'RCUR'], true) ? $rawPaymentType : '';
+            $sepaProvided = ($debtorIban !== '' || $debtorBic !== '' || $paymentType !== '');
         }
 
         // Save old values for redisplay on error
@@ -118,7 +121,7 @@ final class PublicContractController
             'signed_place' => $signedPlace,
             'signed_date' => $rawSignedDate,
             'debtor_iban' => $this->formatIbanDisplay($rawIban),
-            'debtor_bic' => $rawBic ?? '',
+            'debtor_bic' => $rawBic,
             'payment_type' => $paymentType,
         ]);
 
@@ -129,9 +132,9 @@ final class PublicContractController
             exit;
         }
 
-        if ($includeSepa) {
+        if ($includeSepa && $sepaProvided) {
             if ($debtorIban === '' || $paymentType === '') {
-                Flash::add('error', 'Bitte IBAN und Zahlungsart ausfüllen.');
+                Flash::add('error', 'Bitte IBAN und Zahlungsart ausfüllen oder den SEPA-Abschnitt komplett leer lassen.');
                 header('Location: ' . App::url('/c/' . $token));
                 exit;
             }
@@ -211,7 +214,7 @@ final class PublicContractController
 
         // SEPA mandate: separate PDF document with same signature
         $sepaPdfRel = null;
-        if ($includeSepa) {
+        if ($includeSepa && $sepaProvided) {
             $sepaPdfRel = $pdfDirRel . '/sepa_' . (int)$item['id'] . '_' . date('Ymd_His') . '.pdf';
             $sepaPdfFile = App::basePath($sepaPdfRel);
             try {
@@ -250,9 +253,9 @@ final class PublicContractController
             'signer_zip' => $signerZip,
             'signer_city' => $signerCity,
             'signer_country' => $signerCountry,
-            'debtor_iban' => $includeSepa ? $debtorIban : null,
-            'debtor_bic' => $includeSepa && $debtorBic !== '' ? $debtorBic : null,
-            'payment_type' => $includeSepa ? $paymentType : null,
+            'debtor_iban' => ($includeSepa && $sepaProvided) ? $debtorIban : null,
+            'debtor_bic' => ($includeSepa && $sepaProvided && $debtorBic !== '') ? $debtorBic : null,
+            'payment_type' => ($includeSepa && $sepaProvided) ? $paymentType : null,
             'signed_place' => $signedPlace,
             'signed_date' => $signedDate,
             'signature_path' => $sigRel,
@@ -264,7 +267,7 @@ final class PublicContractController
         ]);
 
         // SEPA integration: create mandate + update sevdesk bank data
-        if ($includeSepa && ($item['sevdesk_contact_id'] ?? null)) {
+        if ($includeSepa && $sepaProvided && ($item['sevdesk_contact_id'] ?? null)) {
             $contactId = (int)$item['sevdesk_contact_id'];
             if ($contactId > 0) {
                 try {

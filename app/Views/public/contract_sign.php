@@ -60,15 +60,23 @@ $includeSepa = (int)($item['include_sepa'] ?? 0);
     </div>
 
     <?php if ($includeSepa): ?>
-    <h2 style="margin-top:18px;">SEPA-Lastschriftmandat</h2>
-    <p class="muted">Ich ermächtige den Vertragspartner, Zahlungen von meinem Konto mittels SEPA-Lastschrift einzuziehen.</p>
+    <h2 style="margin-top:18px;">SEPA-Lastschriftmandat <span style="font-weight:400; color:#6b7280; font-size:0.75em;">(optional, empfohlen)</span></h2>
+    <div style="margin: 8px 0 12px; padding: 12px 14px; background:#ecfdf5; border:1px solid #a7f3d0; border-left: 4px solid #10b981; border-radius:10px; font-size:14px; line-height:1.5;">
+      <strong style="color:#065f46;">Ihre Vorteile mit SEPA-Lastschrift</strong>
+      <ul style="margin: 6px 0 0 18px; padding:0; color:#065f46;">
+        <li>Keine Zahlungserinnerungen, keine Mahnungen</li>
+        <li>Automatische, pünktliche Abbuchung &ndash; kein manuelles Überweisen</li>
+        <li>Jederzeit widerrufbar innerhalb von 8 Wochen</li>
+      </ul>
+    </div>
+    <p class="muted" style="margin-top:0;">Ich ermächtige den Vertragspartner, Zahlungen von meinem Konto mittels SEPA-Lastschrift einzuziehen. Sie können diesen Abschnitt auch leer lassen &ndash; dann erfolgt die Zahlung per Überweisung.</p>
     <?php if (!empty($item['mandate_reference'])): ?>
       <p class="muted">Mandatsreferenz: <?php echo htmlspecialchars((string)$item['mandate_reference']); ?></p>
     <?php endif; ?>
     <div class="grid" style="margin-top: 8px;">
       <div>
         <label>IBAN</label>
-        <input type="text" id="iban" name="debtor_iban" required placeholder="DE92 3202 ..." value="<?php echo htmlspecialchars((string)($old['debtor_iban'] ?? '')); ?>">
+        <input type="text" id="iban" name="debtor_iban" placeholder="DE92 3202 ..." value="<?php echo htmlspecialchars((string)($old['debtor_iban'] ?? '')); ?>">
       </div>
       <div>
         <label>BIC (optional)</label>
@@ -79,11 +87,11 @@ $includeSepa = (int)($item['include_sepa'] ?? 0);
         <?php $paymentType = (string)($old['payment_type'] ?? 'RCUR'); ?>
         <div style="display:flex; gap: 12px; margin-top: 6px; flex-wrap: wrap;">
           <label style="display:flex; align-items:center; gap: 6px;">
-            <input type="radio" name="payment_type" value="RCUR" <?php echo $paymentType === 'RCUR' ? 'checked' : ''; ?> required>
+            <input type="radio" name="payment_type" value="RCUR" <?php echo $paymentType === 'RCUR' ? 'checked' : ''; ?>>
             wiederkehrend
           </label>
           <label style="display:flex; align-items:center; gap: 6px;">
-            <input type="radio" name="payment_type" value="OOFF" <?php echo $paymentType === 'OOFF' ? 'checked' : ''; ?> required>
+            <input type="radio" name="payment_type" value="OOFF" <?php echo $paymentType === 'OOFF' ? 'checked' : ''; ?>>
             einmalig
           </label>
         </div>
