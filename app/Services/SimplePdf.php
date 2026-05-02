@@ -682,18 +682,8 @@ final class SimplePdf
         // Subject
         $pdf->SetXY(20, 95);
         $pdf->SetFont('helvetica', 'B', 13);
-        $subject = 'Kündigung Ihres Vertrags';
-        if ($contractId !== '') {
-            $subject .= ' Nr. ' . $contractId;
-        }
-        $pdf->Cell(0, 7, $subject, 0, 1, 'L');
-
-        if ($title !== '') {
-            $pdf->SetFont('helvetica', '', 11);
-            $pdf->SetTextColor(80, 80, 80);
-            $pdf->Cell(0, 5, 'Vertrag: ' . $title, 0, 1, 'L');
-            $pdf->SetTextColor(0, 0, 0);
-        }
+        $subject = $title !== '' ? 'Kündigung: ' . $title : 'Kündigung';
+        $pdf->MultiCell(0, 7, $subject, 0, 'L');
 
         $pdf->Ln(6);
 
