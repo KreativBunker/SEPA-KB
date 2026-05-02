@@ -17,8 +17,17 @@ elseif ($status === 'draft') { $statusClass = ''; $statusLabel = 'Entwurf'; }
 
   <p style="margin-top:8px;">
     Status: <span class="pill <?php echo $statusClass; ?>"><?php echo htmlspecialchars($statusLabel); ?></span>
-    <?php if ((int)($item['include_sepa'] ?? 0)): ?>
+    <?php
+      $sepaOffered = (int)($item['include_sepa'] ?? 0) === 1;
+      $sepaActive = $sepaOffered && !empty($item['debtor_iban']) && !(int)($item['sepa_cancelled'] ?? 0);
+      $sepaSkipped = $sepaOffered && in_array($status, ['signed', 'cancelled'], true) && empty($item['debtor_iban']);
+    ?>
+    <?php if ($sepaActive): ?>
       <span class="pill ok" style="margin-left:6px;">SEPA</span>
+    <?php elseif ($sepaSkipped): ?>
+      <span class="pill" style="margin-left:6px;">SEPA übersprungen</span>
+    <?php elseif ($sepaOffered && $status === 'open'): ?>
+      <span class="pill" style="margin-left:6px;">SEPA angefragt</span>
     <?php endif; ?>
   </p>
 
