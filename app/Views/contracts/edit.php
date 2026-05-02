@@ -110,7 +110,6 @@ $includeSepa = (int)($item['include_sepa'] ?? 0);
   </form>
 </div>
 
-<script id="initial-body" type="text/plain"><?php echo htmlspecialchars((string)($item['body'] ?? '')); ?></script>
 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.min.js"></script>
 <script>
 var quill = new Quill('#editor-container', {
@@ -128,7 +127,7 @@ var quill = new Quill('#editor-container', {
 });
 
 // Load existing body content into Quill
-var initialBody = document.getElementById('initial-body').textContent || '';
+var initialBody = <?php echo json_encode((string)($item['body'] ?? ''), JSON_HEX_TAG | JSON_HEX_AMP); ?>;
 if (initialBody.trim() !== '') {
   if (initialBody.indexOf('<') !== -1) {
     quill.root.innerHTML = initialBody;
