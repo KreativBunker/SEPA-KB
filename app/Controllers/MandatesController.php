@@ -18,8 +18,12 @@ final class MandatesController
     public function index(): void
     {
         $q = trim((string)($_GET['q'] ?? ''));
+        $statusFilter = (string)($_GET['status'] ?? '');
+        if (!in_array($statusFilter, ['active', 'paused', 'revoked'], true)) {
+            $statusFilter = '';
+        }
 
-        $items = (new MandateRepository())->all($q);
+        $items = (new MandateRepository())->all($q, $statusFilter);
 
         // Quelle ermitteln, damit Online und manuelle Mandate in einer Tabelle angezeigt werden können
         foreach ($items as &$it) {
@@ -52,6 +56,7 @@ final class MandatesController
             'openLinks' => $openLinks,
             'openLinksCount' => count($openLinks),
             'q' => $q,
+            'statusFilter' => $statusFilter,
             'csrf' => Csrf::token(),
             'messages' => Flash::all(),
         ]);

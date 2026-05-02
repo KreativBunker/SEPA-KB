@@ -17,6 +17,16 @@ use App\Support\App;
         <label>Suche</label>
         <input type="text" name="q" value="<?php echo htmlspecialchars((string)($q ?? '')); ?>" placeholder="Name, IBAN, Mandatsreferenz">
       </div>
+      <div style="min-width: 180px;">
+        <label>Status</label>
+        <?php $sf = (string)($statusFilter ?? ''); ?>
+        <select name="status">
+          <option value="" <?php echo $sf === '' ? 'selected' : ''; ?>>Alle</option>
+          <option value="active" <?php echo $sf === 'active' ? 'selected' : ''; ?>>Aktiv</option>
+          <option value="paused" <?php echo $sf === 'paused' ? 'selected' : ''; ?>>Pausiert</option>
+          <option value="revoked" <?php echo $sf === 'revoked' ? 'selected' : ''; ?>>Widerrufen</option>
+        </select>
+      </div>
       <div style="display:flex; align-items:flex-end; gap: 8px;">
         <button class="btn" type="submit">Suchen</button>
         <a class="btn secondary" href="<?php echo App::url('/mandates'); ?>">Zurücksetzen</a>
@@ -60,8 +70,16 @@ use App\Support\App;
           $srcLabel = (string)($it['source_label'] ?? '');
           $srcClass = ((string)($it['source'] ?? '') === 'online') ? 'ok' : 'secondary';
           $hasPdf = !empty($it['attachment_path']);
+          $rowStyle = $status === 'revoked' ? 'background:#fff5f5; color:#7a1f1f;' : '';
+          $rowTitle = '';
+          if ($status === 'revoked') {
+              $noteText = trim((string)($it['notes'] ?? ''));
+              if ($noteText !== '') {
+                  $rowTitle = $noteText;
+              }
+          }
         ?>
-        <tr>
+        <tr style="<?php echo $rowStyle; ?>" <?php echo $rowTitle !== '' ? 'title="' . htmlspecialchars($rowTitle) . '"' : ''; ?>>
           <td><span class="pill <?php echo $srcClass; ?>"><?php echo htmlspecialchars($srcLabel); ?></span></td>
           <td>
             <?php echo htmlspecialchars((string)($it['debtor_name'] ?? '')); ?><br>

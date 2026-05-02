@@ -7,15 +7,45 @@ use App\Services\Db;
 
 final class MandateRepository
 {
-    public function all(string $q = ''): array
+    public function all(string $q = '', string $status = ''): array
     {
         $pdo = Db::pdo();
+        $allowedStatus = ['active', 'paused', 'revoked'];
+        $statusFilter = in_array($status, $allowedStatus, true) ? $status : '';
+
+        $where = [];
+        $params = [];
         if ($q !== '') {
-            $st = $pdo->prepare('SELECT * FROM mandates WHERE debtor_name LIKE :q OR mandate_reference LIKE :q OR sevdesk_contact_id LIKE :q ORDER BY id DESC');
-            $st->execute(['q' => '%' . $q . '%']);
-            return $st->fetchAll();
+            $where[] = '(debtor_name LIKE :q OR mandate_reference LIKE :q OR sevdesk_contact_id LIKE :q)';
+            $params['q'] = '%' . $q . '%';
         }
-        return $pdo->query('SELECT * FROM mandates ORDER BY id DESC')->fetchAll();
+        if ($statusFilter !== '') {
+            $where[] = 'status = :status';
+            $params['status'] = $statusFilter;
+        }
+
+        $sql = 'SELECT * FROM mandates';
+        if (!empty($where)) {
+            $sql .= ' WHERE ' . implode(' AND ', $where);
+        }
+        $sql .= ' ORDER BY id DESC';
+
+        $st = $pdo->prepare($sql);
+        $st->execute($params);
+        return $st->fetchAll();
+    }
+
+    public function findByMandateReference(string $reference): ?array
+    {
+        $reference = trim($reference);
+        if ($reference === '') {
+            return null;
+        }
+        $pdo = Db::pdo();
+        $st = $pdo->prepare('SELECT * FROM mandates WHERE mandate_reference = :ref LIMIT 1');
+        $st->execute(['ref' => $reference]);
+        $row = $st->fetch();
+        return $row ?: null;
     }
 
     public function find(int $id): ?array
@@ -91,6 +121,17 @@ public function setStatus(int $id, string $status): void
         $pdo = Db::pdo();
         $st = $pdo->prepare('UPDATE mandates SET status = :s, updated_at = NOW() WHERE id = :id');
         $st->execute(['s' => $status, 'id' => $id]);
+    }
+
+    public function appendNote(int $id, string $note): void
+    {
+        $note = trim($note);
+        if ($note === '') {
+            return;
+        }
+        $pdo = Db::pdo();
+        $st = $pdo->prepare('UPDATE mandates SET notes = TRIM(CONCAT_WS("\n", NULLIF(notes, ""), :note)), updated_at = NOW() WHERE id = :id');
+        $st->execute(['note' => $note, 'id' => $id]);
     }
 
     public function markUsed(int $id, string $seq): void
