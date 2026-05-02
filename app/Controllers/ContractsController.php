@@ -527,6 +527,21 @@ final class ContractsController
             'sepa_cancelled' => $cancelSepa,
         ]);
 
+        if ($cancelSepa === 1) {
+            $mandateRef = trim((string)($item['mandate_reference'] ?? ''));
+            if ($mandateRef !== '') {
+                $mandateRepo = new \App\Repositories\MandateRepository();
+                $mandate = $mandateRepo->findByMandateReference($mandateRef);
+                if ($mandate && (string)($mandate['status'] ?? '') !== 'revoked') {
+                    $mandateRepo->setStatus((int)$mandate['id'], 'revoked');
+                    $mandateRepo->appendNote(
+                        (int)$mandate['id'],
+                        'Widerrufen wegen Vertragskündigung am ' . $cancellationDate . ' (Vertrag #' . $id . ').'
+                    );
+                }
+            }
+        }
+
         // Delete a stale cancellation PDF, if any, so it gets re-generated on next download.
         $oldPdfRel = (string)($item['cancellation_pdf_path'] ?? '');
         if ($oldPdfRel !== '') {
