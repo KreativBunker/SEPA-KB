@@ -46,7 +46,10 @@ elseif ($status === 'revoked') { $statusClass = 'err'; }
 
   <div class="actions" style="margin-top: 14px;">
     <?php if ($status === 'signed' && !empty($item['signature_path'])): ?>
-      <a class="btn" href="<?php echo App::url('/contracts/' . (int)$item['id'] . '/pdf'); ?>">PDF herunterladen</a>
+      <a class="btn" href="<?php echo App::url('/contracts/' . (int)$item['id'] . '/pdf'); ?>">Vertrag (PDF)</a>
+      <?php if ((int)($item['include_sepa'] ?? 0)): ?>
+        <a class="btn" href="<?php echo App::url('/contracts/' . (int)$item['id'] . '/sepa-pdf'); ?>">SEPA-Mandat (PDF)</a>
+      <?php endif; ?>
     <?php endif; ?>
 
     <?php if ($status === 'open' || $status === 'draft'): ?>

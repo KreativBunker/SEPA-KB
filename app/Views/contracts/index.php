@@ -49,7 +49,10 @@ use App\Support\App;
             <td class="muted"><?php echo htmlspecialchars(\App\Support\DateFormatter::toDisplay((string)($c['signed_at'] ?? ''))); ?></td>
             <td>
               <?php if ($status === 'signed'): ?>
-                <a href="<?php echo App::url('/contracts/' . (int)$c['id'] . '/pdf'); ?>" class="btn inline">PDF</a>
+                <a href="<?php echo App::url('/contracts/' . (int)$c['id'] . '/pdf'); ?>" class="btn inline">Vertrag-PDF</a>
+                <?php if ((int)($c['include_sepa'] ?? 0)): ?>
+                  <a href="<?php echo App::url('/contracts/' . (int)$c['id'] . '/sepa-pdf'); ?>" class="btn inline">SEPA-PDF</a>
+                <?php endif; ?>
               <?php else: ?>
                 <a href="<?php echo App::url('/contracts/' . (int)$c['id'] . '/edit'); ?>" class="btn inline secondary">Bearbeiten</a>
                 <form method="post" action="<?php echo App::url('/contracts/' . (int)$c['id'] . '/delete'); ?>" style="display:inline;">

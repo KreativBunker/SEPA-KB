@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS contracts (
     payment_type ENUM('OOFF','RCUR') NULL,
     signature_path VARCHAR(255) NULL,
     pdf_path VARCHAR(255) NULL,
+    sepa_pdf_path VARCHAR(255) NULL,
     signed_place VARCHAR(120) NULL,
     signed_date DATE NULL,
     signed_at DATETIME NULL,
