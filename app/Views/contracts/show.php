@@ -49,10 +49,21 @@ elseif ($status === 'revoked') { $statusClass = 'err'; }
       <a class="btn" href="<?php echo App::url('/contracts/' . (int)$item['id'] . '/pdf'); ?>">PDF herunterladen</a>
     <?php endif; ?>
 
+    <?php if ($status === 'open' || $status === 'draft'): ?>
+      <a class="btn" href="<?php echo App::url('/contracts/' . (int)$item['id'] . '/edit'); ?>">Bearbeiten</a>
+    <?php endif; ?>
+
     <?php if ($status === 'open'): ?>
       <form method="post" action="<?php echo App::url('/contracts/' . (int)$item['id'] . '/revoke'); ?>" style="display:inline;">
         <input type="hidden" name="_csrf" value="<?php echo htmlspecialchars((string)$csrf); ?>">
         <button class="btn danger" type="submit" onclick="return confirm('Vertrag wirklich widerrufen?');">Widerrufen</button>
+      </form>
+    <?php endif; ?>
+
+    <?php if ($status !== 'signed'): ?>
+      <form method="post" action="<?php echo App::url('/contracts/' . (int)$item['id'] . '/delete'); ?>" style="display:inline;">
+        <input type="hidden" name="_csrf" value="<?php echo htmlspecialchars((string)$csrf); ?>">
+        <button class="btn danger" type="submit" onclick="return confirm('Vertrag endgültig löschen?');">Löschen</button>
       </form>
     <?php endif; ?>
   </div>

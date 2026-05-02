@@ -50,6 +50,12 @@ use App\Support\App;
             <td>
               <?php if ($status === 'signed'): ?>
                 <a href="<?php echo App::url('/contracts/' . (int)$c['id'] . '/pdf'); ?>" class="btn inline">PDF</a>
+              <?php else: ?>
+                <a href="<?php echo App::url('/contracts/' . (int)$c['id'] . '/edit'); ?>" class="btn inline secondary">Bearbeiten</a>
+                <form method="post" action="<?php echo App::url('/contracts/' . (int)$c['id'] . '/delete'); ?>" style="display:inline;">
+                  <input type="hidden" name="_csrf" value="<?php echo htmlspecialchars((string)($csrf ?? '')); ?>">
+                  <button class="btn inline danger" type="submit" onclick="return confirm('Vertrag endgültig löschen?');">Löschen</button>
+                </form>
               <?php endif; ?>
             </td>
           </tr>

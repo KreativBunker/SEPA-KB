@@ -109,6 +109,45 @@ final class ContractRepository
         return (int)$pdo->lastInsertId();
     }
 
+    public function update(int $id, array $data): void
+    {
+        $this->ensureTable();
+        $pdo = Db::pdo();
+        $sql = 'UPDATE contracts SET
+            template_id = :template_id,
+            title = :title,
+            body = :body,
+            include_sepa = :include_sepa,
+            sevdesk_contact_id = :sevdesk_contact_id,
+            contact_name = :contact_name,
+            contact_email = :contact_email,
+            signer_name = :signer_name,
+            signer_street = :signer_street,
+            signer_zip = :signer_zip,
+            signer_city = :signer_city,
+            signer_country = :signer_country,
+            mandate_reference = :mandate_reference,
+            updated_at = NOW()
+            WHERE id = :id';
+        $st = $pdo->prepare($sql);
+        $st->execute([
+            'template_id' => $data['template_id'] ?? null,
+            'title' => (string)$data['title'],
+            'body' => (string)$data['body'],
+            'include_sepa' => (int)($data['include_sepa'] ?? 0),
+            'sevdesk_contact_id' => $data['sevdesk_contact_id'] ?? null,
+            'contact_name' => (string)($data['contact_name'] ?? ''),
+            'contact_email' => (string)($data['contact_email'] ?? ''),
+            'signer_name' => $data['signer_name'] ?? null,
+            'signer_street' => $data['signer_street'] ?? null,
+            'signer_zip' => $data['signer_zip'] ?? null,
+            'signer_city' => $data['signer_city'] ?? null,
+            'signer_country' => $data['signer_country'] ?? null,
+            'mandate_reference' => $data['mandate_reference'] ?? null,
+            'id' => $id,
+        ]);
+    }
+
     public function markSigned(int $id, array $data): void
     {
         $this->ensureTable();
@@ -159,6 +198,14 @@ final class ContractRepository
         $this->ensureTable();
         $pdo = Db::pdo();
         $st = $pdo->prepare('UPDATE contracts SET status = "revoked", updated_at = NOW() WHERE id = :id');
+        $st->execute(['id' => $id]);
+    }
+
+    public function delete(int $id): void
+    {
+        $this->ensureTable();
+        $pdo = Db::pdo();
+        $st = $pdo->prepare('DELETE FROM contracts WHERE id = :id');
         $st->execute(['id' => $id]);
     }
 
