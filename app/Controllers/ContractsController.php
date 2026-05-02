@@ -531,7 +531,7 @@ final class ContractsController
         }
 
         header('Content-Type: application/pdf');
-        $filename = 'Kuendigung_Vertrag_' . (int)$item['id'] . '.pdf';
+        $filename = $this->pdfFilename($item, 'Kuendigung');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Content-Length: ' . filesize($pdfFile));
         readfile($pdfFile);
@@ -671,7 +671,7 @@ final class ContractsController
         }
 
         header('Content-Type: application/pdf');
-        $filename = 'Vertrag_' . (int)$item['id'] . '.pdf';
+        $filename = $this->pdfFilename($item, 'Vertrag');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Content-Length: ' . filesize($pdfFile));
         readfile($pdfFile);
@@ -748,7 +748,7 @@ final class ContractsController
         }
 
         header('Content-Type: application/pdf');
-        $filename = 'SEPA_Mandat_' . (int)$item['id'] . '.pdf';
+        $filename = $this->pdfFilename($item, 'SEPA-Mandat');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Content-Length: ' . filesize($pdfFile));
         readfile($pdfFile);
@@ -833,6 +833,20 @@ final class ContractsController
             'city' => $city,
             'country' => $country !== '' ? $country : 'DE',
         ], JSON_UNESCAPED_UNICODE);
+    }
+
+    private function pdfFilename(array $item, string $docType): string
+    {
+        $name = trim((string)($item['signer_name'] ?? '')) !== ''
+            ? (string)$item['signer_name']
+            : (string)($item['contact_name'] ?? '');
+        $name = strtr($name, ['ä' => 'ae', 'ö' => 'oe', 'ü' => 'ue', 'Ä' => 'Ae', 'Ö' => 'Oe', 'Ü' => 'Ue', 'ß' => 'ss']);
+        $slug = preg_replace('/[^A-Za-z0-9]+/', '_', $name) ?? '';
+        $slug = trim($slug, '_');
+        if ($slug === '') {
+            $slug = 'Vertrag_' . (int)($item['id'] ?? 0);
+        }
+        return $docType . '_' . $slug . '.pdf';
     }
 
     private function generateMandateReference(): string
