@@ -14,7 +14,7 @@ final class ContractRepository
             id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             token VARCHAR(80) NOT NULL,
             template_id BIGINT UNSIGNED NULL,
-            status ENUM('draft','open','signed','revoked') NOT NULL DEFAULT 'draft',
+            status ENUM('draft','open','signed','revoked','cancelled') NOT NULL DEFAULT 'draft',
             title VARCHAR(190) NOT NULL,
             body TEXT NOT NULL,
             include_sepa TINYINT(1) NOT NULL DEFAULT 0,
@@ -33,6 +33,11 @@ final class ContractRepository
             signature_path VARCHAR(255) NULL,
             pdf_path VARCHAR(255) NULL,
             sepa_pdf_path VARCHAR(255) NULL,
+            cancellation_pdf_path VARCHAR(255) NULL,
+            cancellation_reason TEXT NULL,
+            cancellation_date DATE NULL,
+            cancelled_at DATETIME NULL,
+            cancelled_by BIGINT UNSIGNED NULL,
             signed_place VARCHAR(120) NULL,
             signed_date DATE NULL,
             signed_at DATETIME NULL,
@@ -53,6 +58,29 @@ final class ContractRepository
             $col = $pdo->query("SHOW COLUMNS FROM contracts LIKE 'sepa_pdf_path'")->fetch();
             if (!$col) {
                 $pdo->exec("ALTER TABLE contracts ADD COLUMN sepa_pdf_path VARCHAR(255) NULL AFTER pdf_path");
+            }
+        } catch (\Throwable $e) {
+            // ignore – older MySQL versions or limited privileges
+        }
+
+        try {
+            $cancellationColumns = [
+                'cancellation_pdf_path' => "ALTER TABLE contracts ADD COLUMN cancellation_pdf_path VARCHAR(255) NULL AFTER sepa_pdf_path",
+                'cancellation_reason' => "ALTER TABLE contracts ADD COLUMN cancellation_reason TEXT NULL AFTER cancellation_pdf_path",
+                'cancellation_date' => "ALTER TABLE contracts ADD COLUMN cancellation_date DATE NULL AFTER cancellation_reason",
+                'cancelled_at' => "ALTER TABLE contracts ADD COLUMN cancelled_at DATETIME NULL AFTER cancellation_date",
+                'cancelled_by' => "ALTER TABLE contracts ADD COLUMN cancelled_by BIGINT UNSIGNED NULL AFTER cancelled_at",
+            ];
+            foreach ($cancellationColumns as $name => $alter) {
+                $col = $pdo->query("SHOW COLUMNS FROM contracts LIKE " . $pdo->quote($name))->fetch();
+                if (!$col) {
+                    $pdo->exec($alter);
+                }
+            }
+
+            $statusCol = $pdo->query("SHOW COLUMNS FROM contracts LIKE 'status'")->fetch();
+            if ($statusCol && isset($statusCol['Type']) && strpos((string)$statusCol['Type'], "'cancelled'") === false) {
+                $pdo->exec("ALTER TABLE contracts MODIFY COLUMN status ENUM('draft','open','signed','revoked','cancelled') NOT NULL DEFAULT 'draft'");
             }
         } catch (\Throwable $e) {
             // ignore – older MySQL versions or limited privileges
@@ -220,6 +248,36 @@ final class ContractRepository
         $pdo = Db::pdo();
         $st = $pdo->prepare('UPDATE contracts SET status = "revoked", updated_at = NOW() WHERE id = :id');
         $st->execute(['id' => $id]);
+    }
+
+    public function cancel(int $id, array $data): void
+    {
+        $this->ensureTable();
+        $pdo = Db::pdo();
+        $sql = 'UPDATE contracts SET
+            status = "cancelled",
+            cancellation_reason = :reason,
+            cancellation_date = :cdate,
+            cancelled_at = :cat,
+            cancelled_by = :cby,
+            updated_at = NOW()
+            WHERE id = :id';
+        $st = $pdo->prepare($sql);
+        $st->execute([
+            'reason' => $data['cancellation_reason'] ?? null,
+            'cdate' => (string)($data['cancellation_date'] ?? date('Y-m-d')),
+            'cat' => (string)($data['cancelled_at'] ?? date('Y-m-d H:i:s')),
+            'cby' => $data['cancelled_by'] ?? null,
+            'id' => $id,
+        ]);
+    }
+
+    public function updateCancellationPdfPath(int $id, string $pdfPath): void
+    {
+        $this->ensureTable();
+        $pdo = Db::pdo();
+        $st = $pdo->prepare('UPDATE contracts SET cancellation_pdf_path = :p, updated_at = NOW() WHERE id = :id');
+        $st->execute(['p' => $pdfPath, 'id' => $id]);
     }
 
     public function delete(int $id): void

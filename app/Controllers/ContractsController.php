@@ -396,6 +396,144 @@ final class ContractsController
         exit;
     }
 
+    public function cancel(array $params): void
+    {
+        if (!Csrf::check((string)($_POST['_csrf'] ?? ''))) {
+            Flash::add('error', 'Sicherheits-Token ungültig.');
+            header('Location: ' . App::url('/contracts'));
+            exit;
+        }
+
+        $id = (int)($params['id'] ?? 0);
+        $repo = new ContractRepository();
+        $item = $repo->find($id);
+
+        if (!$item) {
+            http_response_code(404);
+            echo 'Nicht gefunden.';
+            return;
+        }
+
+        $status = (string)($item['status'] ?? '');
+        if ($status !== 'signed') {
+            Flash::add('error', 'Nur unterschriebene Verträge können gekündigt werden.');
+            header('Location: ' . App::url('/contracts/' . $id));
+            exit;
+        }
+
+        $reason = trim((string)($_POST['cancellation_reason'] ?? ''));
+        $cancellationDate = trim((string)($_POST['cancellation_date'] ?? ''));
+        if ($cancellationDate === '') {
+            $cancellationDate = date('Y-m-d');
+        } else {
+            $d = \DateTimeImmutable::createFromFormat('Y-m-d', $cancellationDate);
+            if (!$d instanceof \DateTimeImmutable) {
+                Flash::add('error', 'Ungültiges Kündigungsdatum.');
+                header('Location: ' . App::url('/contracts/' . $id));
+                exit;
+            }
+        }
+
+        $user = Auth::user();
+
+        $repo->cancel($id, [
+            'cancellation_reason' => $reason !== '' ? $reason : null,
+            'cancellation_date' => $cancellationDate,
+            'cancelled_at' => date('Y-m-d H:i:s'),
+            'cancelled_by' => $user ? (int)$user['id'] : null,
+        ]);
+
+        // Delete a stale cancellation PDF, if any, so it gets re-generated on next download.
+        $oldPdfRel = (string)($item['cancellation_pdf_path'] ?? '');
+        if ($oldPdfRel !== '') {
+            $oldPdfFile = App::basePath($oldPdfRel);
+            if (is_file($oldPdfFile)) {
+                @unlink($oldPdfFile);
+            }
+        }
+
+        Flash::add('success', 'Vertrag gekündigt.');
+        header('Location: ' . App::url('/contracts/' . $id));
+        exit;
+    }
+
+    public function downloadCancellationPdf(array $params): void
+    {
+        $id = (int)($params['id'] ?? 0);
+        $repo = new ContractRepository();
+        $item = $repo->find($id);
+
+        if (!$item || (string)($item['status'] ?? '') !== 'cancelled') {
+            http_response_code(404);
+            echo 'Kündigung nicht gefunden.';
+            return;
+        }
+
+        $pdfRel = (string)($item['cancellation_pdf_path'] ?? '');
+        if ($pdfRel === '') {
+            $pdfRel = 'storage/uploads/contracts/cancellation_' . (int)$item['id'] . '.pdf';
+        }
+        $pdfFile = App::basePath($pdfRel);
+        $dir = dirname($pdfFile);
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
+
+        $settings = (new SettingsRepository())->get();
+
+        $cancelledByName = '';
+        $cancelledById = $item['cancelled_by'] ?? null;
+        if ($cancelledById !== null) {
+            $current = Auth::user();
+            if ($current && (int)$current['id'] === (int)$cancelledById) {
+                $cancelledByName = (string)($current['name'] ?? $current['email'] ?? '');
+            }
+        }
+
+        try {
+            SimplePdf::createCancellationPdf([
+                'contract_id' => (int)$item['id'],
+                'title' => (string)($item['title'] ?? ''),
+                'signer_name' => (string)($item['signer_name'] ?? $item['contact_name'] ?? ''),
+                'signer_street' => (string)($item['signer_street'] ?? ''),
+                'signer_zip' => (string)($item['signer_zip'] ?? ''),
+                'signer_city' => (string)($item['signer_city'] ?? ''),
+                'signer_country' => (string)($item['signer_country'] ?? 'DE'),
+                'contact_name' => (string)($item['contact_name'] ?? ''),
+                'creditor_name' => (string)($settings['creditor_name'] ?? ''),
+                'creditor_street' => (string)($settings['creditor_street'] ?? ''),
+                'creditor_zip' => (string)($settings['creditor_zip'] ?? ''),
+                'creditor_city' => (string)($settings['creditor_city'] ?? ''),
+                'creditor_country' => (string)($settings['creditor_country'] ?? ''),
+                'mandate_reference' => (string)($item['mandate_reference'] ?? ''),
+                'signed_date' => (string)($item['signed_date'] ?? ''),
+                'cancellation_reason' => (string)($item['cancellation_reason'] ?? ''),
+                'cancellation_date' => (string)($item['cancellation_date'] ?? ''),
+                'cancelled_at' => (string)($item['cancelled_at'] ?? ''),
+                'cancelled_by_name' => $cancelledByName,
+            ], $pdfFile);
+
+            $repo->updateCancellationPdfPath($id, $pdfRel);
+        } catch (\Throwable $e) {
+            Logger::error('Kündigungs-PDF Erstellung fehlgeschlagen', $e);
+            http_response_code(500);
+            echo 'PDF konnte nicht erstellt werden.';
+            return;
+        }
+
+        if (!is_file($pdfFile)) {
+            http_response_code(500);
+            echo 'PDF konnte nicht erstellt werden.';
+            return;
+        }
+
+        header('Content-Type: application/pdf');
+        $filename = 'Kuendigung_Vertrag_' . (int)$item['id'] . '.pdf';
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Length: ' . filesize($pdfFile));
+        readfile($pdfFile);
+    }
+
     public function delete(array $params): void
     {
         if (!Csrf::check((string)($_POST['_csrf'] ?? ''))) {
@@ -415,8 +553,8 @@ final class ContractsController
         }
 
         $status = (string)($item['status'] ?? '');
-        if ($status === 'signed') {
-            Flash::add('error', 'Unterschriebene Verträge können nicht gelöscht werden.');
+        if ($status === 'signed' || $status === 'cancelled') {
+            Flash::add('error', 'Unterschriebene oder gekündigte Verträge können nicht gelöscht werden.');
             header('Location: ' . App::url('/contracts/' . $id));
             exit;
         }
@@ -440,6 +578,13 @@ final class ContractsController
             $sepaPdfFile = App::basePath($sepaPdfRel);
             if (is_file($sepaPdfFile)) {
                 @unlink($sepaPdfFile);
+            }
+        }
+        $cancelPdfRel = (string)($item['cancellation_pdf_path'] ?? '');
+        if ($cancelPdfRel !== '') {
+            $cancelPdfFile = App::basePath($cancelPdfRel);
+            if (is_file($cancelPdfFile)) {
+                @unlink($cancelPdfFile);
             }
         }
 

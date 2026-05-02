@@ -82,9 +82,11 @@ $router->get('/contracts/{id}', 'App\\Controllers\\ContractsController@show', ['
 $router->get('/contracts/{id}/edit', 'App\\Controllers\\ContractsController@edit', ['auth','role:admin,staff']);
 $router->post('/contracts/{id}', 'App\\Controllers\\ContractsController@update', ['auth','role:admin,staff']);
 $router->post('/contracts/{id}/revoke', 'App\\Controllers\\ContractsController@revoke', ['auth','role:admin,staff']);
+$router->post('/contracts/{id}/cancel', 'App\\Controllers\\ContractsController@cancel', ['auth','role:admin,staff']);
 $router->post('/contracts/{id}/delete', 'App\\Controllers\\ContractsController@delete', ['auth','role:admin,staff']);
 $router->get('/contracts/{id}/pdf', 'App\\Controllers\\ContractsController@downloadPdf', ['auth','role:admin,staff']);
 $router->get('/contracts/{id}/sepa-pdf', 'App\\Controllers\\ContractsController@downloadSepaPdf', ['auth','role:admin,staff']);
+$router->get('/contracts/{id}/cancellation-pdf', 'App\\Controllers\\ContractsController@downloadCancellationPdf', ['auth','role:admin,staff']);
 
 // Public Contract Signing
 $router->get('/c/{token}', 'App\\Controllers\\PublicContractController@show');
