@@ -429,14 +429,14 @@ final class SimplePdf
     }
 
     /**
-     * Generate a contract PDF with optional SEPA mandate section.
+     * Generate a contract PDF. SEPA mandate (if any) is generated as a
+     * separate document via createMandatePdf().
      * Uses TCPDF for HTML rendering with rich text formatting support.
      */
     public static function createContractPdf(array $data, string $signaturePath, string $outPath): void
     {
         $title = (string)($data['title'] ?? 'Vertrag');
         $bodyHtml = (string)($data['body'] ?? '');
-        $includeSepa = (int)($data['include_sepa'] ?? 0);
         $signerName = (string)($data['signer_name'] ?? '');
 
         // Replace placeholders in body HTML
@@ -507,53 +507,6 @@ final class SimplePdf
         </style>';
         $pdf->writeHTML($bodyStyle . $bodyHtml, true, false, true, false, '');
         $pdf->Ln(6);
-
-        // --- SEPA section (if enabled) ---
-        if ($includeSepa) {
-            // Check if we need a new page (need ~45mm)
-            if ($pdf->GetY() > 240) {
-                $pdf->AddPage();
-            }
-
-            $pdf->SetFillColor(245, 245, 245);
-            $pdf->SetDrawColor(200, 200, 200);
-            $sepaY = $pdf->GetY();
-            $pdf->RoundedRect(15, $sepaY, 180, 42, 2, '1111', 'DF');
-
-            $pdf->SetXY(20, $sepaY + 3);
-            $pdf->SetFont('helvetica', 'B', 12);
-            $pdf->Cell(170, 6, 'SEPA-Lastschriftmandat', 0, 1, 'L');
-
-            $pdf->SetFont('helvetica', '', 9);
-            $sepaLines = [];
-            $mandateRef = (string)($data['mandate_reference'] ?? '');
-            if ($mandateRef !== '') {
-                $sepaLines[] = 'Mandatsreferenz: ' . $mandateRef;
-            }
-            $creditorId = (string)($data['creditor_id'] ?? '');
-            if ($creditorId !== '') {
-                $sepaLines[] = 'Glaeubiger-ID: ' . $creditorId;
-            }
-            $iban = (string)($data['debtor_iban'] ?? '');
-            if ($iban !== '') {
-                $sepaLines[] = 'IBAN: ' . $iban;
-            }
-            $bic = trim((string)($data['debtor_bic'] ?? ''));
-            if ($bic !== '') {
-                $sepaLines[] = 'BIC: ' . $bic;
-            }
-            $paymentType = (string)($data['payment_type'] ?? '');
-            if ($paymentType !== '') {
-                $label = $paymentType === 'OOFF' ? 'Einmalige Zahlung' : ($paymentType === 'RCUR' ? 'Wiederkehrende Zahlungen' : $paymentType);
-                $sepaLines[] = 'Zahlungsart: ' . $label;
-            }
-            foreach ($sepaLines as $sl) {
-                $pdf->SetX(20);
-                $pdf->Cell(170, 5, $sl, 0, 1, 'L');
-            }
-            $pdf->SetY($sepaY + 44);
-            $pdf->Ln(4);
-        }
 
         // --- Signature block ---
         // Check if we need a new page (need ~75mm)

@@ -184,7 +184,6 @@ final class PublicContractController
             SimplePdf::createContractPdf([
                 'title' => (string)($item['title'] ?? ''),
                 'body' => (string)($item['body'] ?? ''),
-                'include_sepa' => $includeSepa,
                 'creditor_name' => (string)($settings['creditor_name'] ?? ''),
                 'creditor_id' => (string)($settings['creditor_id'] ?? ''),
                 'creditor_street' => (string)($settings['creditor_street'] ?? ''),
@@ -199,9 +198,6 @@ final class PublicContractController
                 'signer_zip' => $signerZip,
                 'signer_city' => $signerCity,
                 'signer_country' => $signerCountry,
-                'debtor_iban' => $debtorIban,
-                'debtor_bic' => $debtorBic,
-                'payment_type' => $paymentType,
                 'signed_place' => $signedPlace,
                 'signed_date' => $signedDate,
                 'signed_at' => $signedAt,
@@ -211,6 +207,40 @@ final class PublicContractController
         } catch (\Throwable $e) {
             Logger::error('Contract PDF Erstellung fehlgeschlagen', $e);
             $pdfRel = '';
+        }
+
+        // SEPA mandate: separate PDF document with same signature
+        $sepaPdfRel = null;
+        if ($includeSepa) {
+            $sepaPdfRel = $pdfDirRel . '/sepa_' . (int)$item['id'] . '_' . date('Ymd_His') . '.pdf';
+            $sepaPdfFile = App::basePath($sepaPdfRel);
+            try {
+                SimplePdf::createMandatePdf([
+                    'creditor_name' => (string)($settings['creditor_name'] ?? ''),
+                    'creditor_id' => (string)($settings['creditor_id'] ?? ''),
+                    'creditor_street' => (string)($settings['creditor_street'] ?? ''),
+                    'creditor_zip' => (string)($settings['creditor_zip'] ?? ''),
+                    'creditor_city' => (string)($settings['creditor_city'] ?? ''),
+                    'creditor_country' => (string)($settings['creditor_country'] ?? ''),
+                    'mandate_reference' => (string)($item['mandate_reference'] ?? ''),
+                    'debtor_name' => $signerName,
+                    'debtor_street' => $signerStreet,
+                    'debtor_zip' => $signerZip,
+                    'debtor_city' => $signerCity,
+                    'debtor_country' => $signerCountry,
+                    'debtor_iban' => $debtorIban,
+                    'debtor_bic' => $debtorBic,
+                    'payment_type' => $paymentType,
+                    'signed_place' => $signedPlace,
+                    'signed_date' => $signedDate,
+                    'signed_at' => $signedAt,
+                    'signed_ip' => $signedIp,
+                    'signed_user_agent' => $signedUserAgent,
+                ], $sigFile, $sepaPdfFile);
+            } catch (\Throwable $e) {
+                Logger::error('SEPA PDF Erstellung fehlgeschlagen', $e);
+                $sepaPdfRel = null;
+            }
         }
 
         // Update contract record
@@ -227,6 +257,7 @@ final class PublicContractController
             'signed_date' => $signedDate,
             'signature_path' => $sigRel,
             'pdf_path' => $pdfRel,
+            'sepa_pdf_path' => $sepaPdfRel,
             'signed_at' => $signedAt,
             'signed_ip' => $signedIp,
             'signed_user_agent' => $signedUserAgent,
@@ -323,7 +354,6 @@ final class PublicContractController
             SimplePdf::createContractPdf([
                 'title' => (string)($item['title'] ?? ''),
                 'body' => (string)($item['body'] ?? ''),
-                'include_sepa' => (int)($item['include_sepa'] ?? 0),
                 'creditor_name' => (string)($settings['creditor_name'] ?? ''),
                 'creditor_id' => (string)($settings['creditor_id'] ?? ''),
                 'creditor_street' => (string)($settings['creditor_street'] ?? ''),
@@ -338,9 +368,6 @@ final class PublicContractController
                 'signer_zip' => (string)($item['signer_zip'] ?? ''),
                 'signer_city' => (string)($item['signer_city'] ?? ''),
                 'signer_country' => (string)($item['signer_country'] ?? 'DE'),
-                'debtor_iban' => (string)($item['debtor_iban'] ?? ''),
-                'debtor_bic' => (string)($item['debtor_bic'] ?? ''),
-                'payment_type' => (string)($item['payment_type'] ?? ''),
                 'signed_place' => (string)($item['signed_place'] ?? ''),
                 'signed_date' => (string)($item['signed_date'] ?? ''),
                 'signed_at' => (string)($item['signed_at'] ?? ''),
@@ -364,6 +391,83 @@ final class PublicContractController
 
         header('Content-Type: application/pdf');
         $filename = 'Vertrag_' . (int)$item['id'] . '.pdf';
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Length: ' . filesize($pdfFile));
+        readfile($pdfFile);
+    }
+
+    public function sepaPdf(array $params): void
+    {
+        $token = (string)($params['token'] ?? '');
+        $repo = new ContractRepository();
+        $item = $repo->findByToken($token);
+
+        if (!$item || (string)($item['status'] ?? '') !== 'signed' || !(int)($item['include_sepa'] ?? 0)) {
+            http_response_code(404);
+            echo 'SEPA-Mandat nicht gefunden.';
+            return;
+        }
+
+        $sigRel = (string)($item['signature_path'] ?? '');
+        $sigFile = $sigRel !== '' ? App::basePath($sigRel) : '';
+        if ($sigFile === '' || !is_file($sigFile)) {
+            http_response_code(500);
+            echo 'Signatur fehlt, PDF kann nicht erstellt werden.';
+            return;
+        }
+
+        $pdfRel = (string)($item['sepa_pdf_path'] ?? '');
+        if ($pdfRel === '') {
+            $pdfRel = 'storage/uploads/contracts/sepa_' . (int)$item['id'] . '.pdf';
+        }
+        $pdfFile = App::basePath($pdfRel);
+        $dir = dirname($pdfFile);
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
+
+        $settings = (new SettingsRepository())->get();
+
+        try {
+            SimplePdf::createMandatePdf([
+                'creditor_name' => (string)($settings['creditor_name'] ?? ''),
+                'creditor_id' => (string)($settings['creditor_id'] ?? ''),
+                'creditor_street' => (string)($settings['creditor_street'] ?? ''),
+                'creditor_zip' => (string)($settings['creditor_zip'] ?? ''),
+                'creditor_city' => (string)($settings['creditor_city'] ?? ''),
+                'creditor_country' => (string)($settings['creditor_country'] ?? ''),
+                'mandate_reference' => (string)($item['mandate_reference'] ?? ''),
+                'debtor_name' => (string)($item['signer_name'] ?? ''),
+                'debtor_street' => (string)($item['signer_street'] ?? ''),
+                'debtor_zip' => (string)($item['signer_zip'] ?? ''),
+                'debtor_city' => (string)($item['signer_city'] ?? ''),
+                'debtor_country' => (string)($item['signer_country'] ?? 'DE'),
+                'debtor_iban' => (string)($item['debtor_iban'] ?? ''),
+                'debtor_bic' => (string)($item['debtor_bic'] ?? ''),
+                'payment_type' => (string)($item['payment_type'] ?? ''),
+                'signed_place' => (string)($item['signed_place'] ?? ''),
+                'signed_date' => (string)($item['signed_date'] ?? ''),
+                'signed_at' => (string)($item['signed_at'] ?? ''),
+                'signed_ip' => (string)($item['signed_ip'] ?? ''),
+                'signed_user_agent' => (string)($item['signed_user_agent'] ?? ''),
+            ], $sigFile, $pdfFile);
+
+            $repo->updateSepaPdfPath((int)$item['id'], $pdfRel);
+        } catch (\Throwable $e) {
+            Logger::error('SEPA PDF Erstellung fehlgeschlagen', $e);
+            http_response_code(500);
+            echo 'PDF konnte nicht erstellt werden.';
+            return;
+        }
+
+        if (!is_file($pdfFile)) {
+            http_response_code(500);
+            echo 'PDF konnte nicht erstellt werden.';
+            return;
+        }
+
+        header('Content-Type: application/pdf');
+        $filename = 'SEPA_Mandat_' . (int)$item['id'] . '.pdf';
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         header('Content-Length: ' . filesize($pdfFile));
         readfile($pdfFile);

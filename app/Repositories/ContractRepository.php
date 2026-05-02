@@ -32,6 +32,7 @@ final class ContractRepository
             payment_type ENUM('OOFF','RCUR') NULL,
             signature_path VARCHAR(255) NULL,
             pdf_path VARCHAR(255) NULL,
+            sepa_pdf_path VARCHAR(255) NULL,
             signed_place VARCHAR(120) NULL,
             signed_date DATE NULL,
             signed_at DATETIME NULL,
@@ -46,6 +47,16 @@ final class ContractRepository
             KEY ix_contracts_template (template_id),
             KEY ix_contracts_contact (sevdesk_contact_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // Backfill column for existing installations
+        try {
+            $col = $pdo->query("SHOW COLUMNS FROM contracts LIKE 'sepa_pdf_path'")->fetch();
+            if (!$col) {
+                $pdo->exec("ALTER TABLE contracts ADD COLUMN sepa_pdf_path VARCHAR(255) NULL AFTER pdf_path");
+            }
+        } catch (\Throwable $e) {
+            // ignore – older MySQL versions or limited privileges
+        }
     }
 
     public function all(): array
@@ -166,6 +177,7 @@ final class ContractRepository
             signed_date = :signed_date,
             signature_path = :signature_path,
             pdf_path = :pdf_path,
+            sepa_pdf_path = :sepa_pdf_path,
             signed_at = :signed_at,
             signed_ip = :signed_ip,
             signed_user_agent = :signed_user_agent,
@@ -186,11 +198,20 @@ final class ContractRepository
             'signed_date' => (string)($data['signed_date'] ?? date('Y-m-d')),
             'signature_path' => (string)($data['signature_path'] ?? ''),
             'pdf_path' => (string)($data['pdf_path'] ?? ''),
+            'sepa_pdf_path' => $data['sepa_pdf_path'] ?? null,
             'signed_at' => (string)($data['signed_at'] ?? date('Y-m-d H:i:s')),
             'signed_ip' => (string)($data['signed_ip'] ?? ''),
             'signed_user_agent' => (string)($data['signed_user_agent'] ?? ''),
             'id' => $id,
         ]);
+    }
+
+    public function updateSepaPdfPath(int $id, string $pdfPath): void
+    {
+        $this->ensureTable();
+        $pdo = Db::pdo();
+        $st = $pdo->prepare('UPDATE contracts SET sepa_pdf_path = :p, updated_at = NOW() WHERE id = :id');
+        $st->execute(['p' => $pdfPath, 'id' => $id]);
     }
 
     public function revoke(int $id): void

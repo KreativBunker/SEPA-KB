@@ -84,12 +84,14 @@ $router->post('/contracts/{id}', 'App\\Controllers\\ContractsController@update',
 $router->post('/contracts/{id}/revoke', 'App\\Controllers\\ContractsController@revoke', ['auth','role:admin,staff']);
 $router->post('/contracts/{id}/delete', 'App\\Controllers\\ContractsController@delete', ['auth','role:admin,staff']);
 $router->get('/contracts/{id}/pdf', 'App\\Controllers\\ContractsController@downloadPdf', ['auth','role:admin,staff']);
+$router->get('/contracts/{id}/sepa-pdf', 'App\\Controllers\\ContractsController@downloadSepaPdf', ['auth','role:admin,staff']);
 
 // Public Contract Signing
 $router->get('/c/{token}', 'App\\Controllers\\PublicContractController@show');
 $router->post('/c/{token}', 'App\\Controllers\\PublicContractController@sign');
 $router->get('/c/{token}/done', 'App\\Controllers\\PublicContractController@done');
 $router->get('/c/{token}/pdf', 'App\\Controllers\\PublicContractController@pdf');
+$router->get('/c/{token}/sepa-pdf', 'App\\Controllers\\PublicContractController@sepaPdf');
 
 // System Update (Admin only)
 $router->get('/update', 'App\\Controllers\\UpdateController@show', ['auth','role:admin']);
