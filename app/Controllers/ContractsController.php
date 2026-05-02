@@ -205,6 +205,159 @@ final class ContractsController
         exit;
     }
 
+    public function edit(array $params): void
+    {
+        $id = (int)($params['id'] ?? 0);
+        $repo = new ContractRepository();
+        $item = $repo->find($id);
+
+        if (!$item) {
+            http_response_code(404);
+            echo 'Nicht gefunden.';
+            return;
+        }
+
+        $status = (string)($item['status'] ?? '');
+        if ($status !== 'draft' && $status !== 'open') {
+            Flash::add('error', 'Vertrag kann nicht bearbeitet werden, da er bereits unterschrieben oder widerrufen ist.');
+            header('Location: ' . App::url('/contracts/' . $id));
+            exit;
+        }
+
+        $templates = (new ContractTemplateRepository())->allActive();
+        $contacts = $_SESSION['sevdesk_contacts_cache'] ?? [];
+
+        if (!is_array($contacts) || empty($contacts)) {
+            try {
+                $client = new SevdeskClient(new SevdeskAccountRepository());
+                $all = $client->getAllContacts(null, 200, 5000);
+                $normalized = [];
+                foreach ($all as $c) {
+                    if (!is_array($c)) {
+                        continue;
+                    }
+                    $normalized[] = [
+                        'id' => (int)($c['id'] ?? 0),
+                        'name' => (string)($c['name'] ?? ''),
+                        'email' => $this->extractEmail($c),
+                        'customerNumber' => $c['customerNumber'] ?? null,
+                        'bankAccount' => $c['bankAccount'] ?? null,
+                        'bankBic' => $c['bankBic'] ?? ($c['bic'] ?? null),
+                    ];
+                }
+                usort($normalized, function (array $a, array $b): int {
+                    return mb_strtolower((string)($a['name'] ?? '')) <=> mb_strtolower((string)($b['name'] ?? ''));
+                });
+                $_SESSION['sevdesk_contacts_cache'] = $normalized;
+                $contacts = $normalized;
+            } catch (\Throwable $e) {
+                $contacts = [];
+            }
+        } else {
+            usort($contacts, function ($a, $b): int {
+                return mb_strtolower((string)($a['name'] ?? '')) <=> mb_strtolower((string)($b['name'] ?? ''));
+            });
+        }
+
+        View::render('contracts/edit', [
+            'item' => $item,
+            'templates' => $templates,
+            'contacts' => $contacts,
+            'csrf' => Csrf::token(),
+        ]);
+    }
+
+    public function update(array $params): void
+    {
+        if (!Csrf::check((string)($_POST['_csrf'] ?? ''))) {
+            Flash::add('error', 'Sicherheits-Token ungültig.');
+            header('Location: ' . App::url('/contracts'));
+            exit;
+        }
+
+        $id = (int)($params['id'] ?? 0);
+        $repo = new ContractRepository();
+        $item = $repo->find($id);
+
+        if (!$item) {
+            http_response_code(404);
+            echo 'Nicht gefunden.';
+            return;
+        }
+
+        $status = (string)($item['status'] ?? '');
+        if ($status !== 'draft' && $status !== 'open') {
+            Flash::add('error', 'Vertrag kann nicht bearbeitet werden, da er bereits unterschrieben oder widerrufen ist.');
+            header('Location: ' . App::url('/contracts/' . $id));
+            exit;
+        }
+
+        $templateId = (int)($_POST['template_id'] ?? 0);
+        $contactId = ($_POST['sevdesk_contact_id'] ?? '') !== '' ? (int)$_POST['sevdesk_contact_id'] : null;
+        $contactName = trim((string)($_POST['contact_name'] ?? ''));
+        $contactEmail = trim((string)($_POST['contact_email'] ?? ''));
+        $signerName = trim((string)($_POST['signer_name'] ?? ''));
+        $signerStreet = trim((string)($_POST['signer_street'] ?? ''));
+        $signerZip = trim((string)($_POST['signer_zip'] ?? ''));
+        $signerCity = trim((string)($_POST['signer_city'] ?? ''));
+        $rawSignerCountry = trim((string)($_POST['signer_country'] ?? ''));
+        $signerCountry = $rawSignerCountry !== '' ? strtoupper($rawSignerCountry) : 'DE';
+        $title = trim((string)($_POST['title'] ?? ''));
+        $body = trim((string)($_POST['body'] ?? ''));
+        $includeSepa = isset($_POST['include_sepa']) ? 1 : 0;
+
+        if ($title === '' || $body === '') {
+            Flash::add('error', 'Titel und Vertragstext sind Pflichtfelder.');
+            header('Location: ' . App::url('/contracts/' . $id . '/edit'));
+            exit;
+        }
+
+        if ($contactName === '' && $contactId !== null) {
+            $contacts = $_SESSION['sevdesk_contacts_cache'] ?? [];
+            if (is_array($contacts)) {
+                foreach ($contacts as $c) {
+                    if ((int)($c['id'] ?? 0) === $contactId) {
+                        $contactName = (string)($c['name'] ?? '');
+                        if ($contactEmail === '') {
+                            $contactEmail = trim((string)($c['email'] ?? ''));
+                        }
+                        break;
+                    }
+                }
+            }
+            if ($contactName === '') {
+                $contactName = 'Kontakt ' . $contactId;
+            }
+        }
+
+        $existingMandateRef = (string)($item['mandate_reference'] ?? '');
+        if ($includeSepa) {
+            $mandateRef = $existingMandateRef !== '' ? $existingMandateRef : $this->generateMandateReference();
+        } else {
+            $mandateRef = null;
+        }
+
+        $repo->update($id, [
+            'template_id' => $templateId > 0 ? $templateId : null,
+            'title' => $title,
+            'body' => $body,
+            'include_sepa' => $includeSepa,
+            'sevdesk_contact_id' => $contactId,
+            'contact_name' => $contactName,
+            'contact_email' => $contactEmail,
+            'signer_name' => $signerName !== '' ? $signerName : null,
+            'signer_street' => $signerStreet !== '' ? $signerStreet : null,
+            'signer_zip' => $signerZip !== '' ? $signerZip : null,
+            'signer_city' => $signerCity !== '' ? $signerCity : null,
+            'signer_country' => $signerCountry,
+            'mandate_reference' => $mandateRef,
+        ]);
+
+        Flash::add('success', 'Vertrag aktualisiert.');
+        header('Location: ' . App::url('/contracts/' . $id));
+        exit;
+    }
+
     public function show(array $params): void
     {
         $id = (int)($params['id'] ?? 0);
@@ -240,6 +393,53 @@ final class ContractsController
 
         Flash::add('success', 'Vertrag widerrufen.');
         header('Location: ' . App::url('/contracts/' . $id));
+        exit;
+    }
+
+    public function delete(array $params): void
+    {
+        if (!Csrf::check((string)($_POST['_csrf'] ?? ''))) {
+            Flash::add('error', 'Sicherheits-Token ungültig.');
+            header('Location: ' . App::url('/contracts'));
+            exit;
+        }
+
+        $id = (int)($params['id'] ?? 0);
+        $repo = new ContractRepository();
+        $item = $repo->find($id);
+
+        if (!$item) {
+            http_response_code(404);
+            echo 'Nicht gefunden.';
+            return;
+        }
+
+        $status = (string)($item['status'] ?? '');
+        if ($status === 'signed') {
+            Flash::add('error', 'Unterschriebene Verträge können nicht gelöscht werden.');
+            header('Location: ' . App::url('/contracts/' . $id));
+            exit;
+        }
+
+        $sigRel = (string)($item['signature_path'] ?? '');
+        if ($sigRel !== '') {
+            $sigFile = App::basePath($sigRel);
+            if (is_file($sigFile)) {
+                @unlink($sigFile);
+            }
+        }
+        $pdfRel = (string)($item['pdf_path'] ?? '');
+        if ($pdfRel !== '') {
+            $pdfFile = App::basePath($pdfRel);
+            if (is_file($pdfFile)) {
+                @unlink($pdfFile);
+            }
+        }
+
+        $repo->delete($id);
+
+        Flash::add('success', 'Vertrag gelöscht.');
+        header('Location: ' . App::url('/contracts'));
         exit;
     }
 

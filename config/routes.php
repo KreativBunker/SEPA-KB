@@ -79,7 +79,10 @@ $router->get('/contracts/create', 'App\\Controllers\\ContractsController@create'
 $router->get('/contracts/contact/{id}', 'App\\Controllers\\ContractsController@contact', ['auth','role:admin,staff']);
 $router->post('/contracts', 'App\\Controllers\\ContractsController@store', ['auth','role:admin,staff']);
 $router->get('/contracts/{id}', 'App\\Controllers\\ContractsController@show', ['auth','role:admin,staff']);
+$router->get('/contracts/{id}/edit', 'App\\Controllers\\ContractsController@edit', ['auth','role:admin,staff']);
+$router->post('/contracts/{id}', 'App\\Controllers\\ContractsController@update', ['auth','role:admin,staff']);
 $router->post('/contracts/{id}/revoke', 'App\\Controllers\\ContractsController@revoke', ['auth','role:admin,staff']);
+$router->post('/contracts/{id}/delete', 'App\\Controllers\\ContractsController@delete', ['auth','role:admin,staff']);
 $router->get('/contracts/{id}/pdf', 'App\\Controllers\\ContractsController@downloadPdf', ['auth','role:admin,staff']);
 
 // Public Contract Signing
