@@ -423,6 +423,7 @@ final class ContractsController
 
         $reason = trim((string)($_POST['cancellation_reason'] ?? ''));
         $cancellationDate = trim((string)($_POST['cancellation_date'] ?? ''));
+        $cancelSepa = isset($_POST['cancel_sepa']) && (int)($item['include_sepa'] ?? 0) === 1 ? 1 : 0;
         if ($cancellationDate === '') {
             $cancellationDate = date('Y-m-d');
         } else {
@@ -441,6 +442,7 @@ final class ContractsController
             'cancellation_date' => $cancellationDate,
             'cancelled_at' => date('Y-m-d H:i:s'),
             'cancelled_by' => $user ? (int)$user['id'] : null,
+            'sepa_cancelled' => $cancelSepa,
         ]);
 
         // Delete a stale cancellation PDF, if any, so it gets re-generated on next download.
@@ -506,6 +508,7 @@ final class ContractsController
                 'creditor_city' => (string)($settings['creditor_city'] ?? ''),
                 'creditor_country' => (string)($settings['creditor_country'] ?? ''),
                 'mandate_reference' => (string)($item['mandate_reference'] ?? ''),
+                'sepa_cancelled' => (int)($item['sepa_cancelled'] ?? 0) === 1,
                 'signed_date' => (string)($item['signed_date'] ?? ''),
                 'cancellation_reason' => (string)($item['cancellation_reason'] ?? ''),
                 'cancellation_date' => (string)($item['cancellation_date'] ?? ''),

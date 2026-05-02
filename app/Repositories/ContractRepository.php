@@ -38,6 +38,7 @@ final class ContractRepository
             cancellation_date DATE NULL,
             cancelled_at DATETIME NULL,
             cancelled_by BIGINT UNSIGNED NULL,
+            sepa_cancelled TINYINT(1) NOT NULL DEFAULT 0,
             signed_place VARCHAR(120) NULL,
             signed_date DATE NULL,
             signed_at DATETIME NULL,
@@ -70,6 +71,7 @@ final class ContractRepository
                 'cancellation_date' => "ALTER TABLE contracts ADD COLUMN cancellation_date DATE NULL AFTER cancellation_reason",
                 'cancelled_at' => "ALTER TABLE contracts ADD COLUMN cancelled_at DATETIME NULL AFTER cancellation_date",
                 'cancelled_by' => "ALTER TABLE contracts ADD COLUMN cancelled_by BIGINT UNSIGNED NULL AFTER cancelled_at",
+                'sepa_cancelled' => "ALTER TABLE contracts ADD COLUMN sepa_cancelled TINYINT(1) NOT NULL DEFAULT 0 AFTER cancelled_by",
             ];
             foreach ($cancellationColumns as $name => $alter) {
                 $col = $pdo->query("SHOW COLUMNS FROM contracts LIKE " . $pdo->quote($name))->fetch();
@@ -260,6 +262,7 @@ final class ContractRepository
             cancellation_date = :cdate,
             cancelled_at = :cat,
             cancelled_by = :cby,
+            sepa_cancelled = :sepa,
             updated_at = NOW()
             WHERE id = :id';
         $st = $pdo->prepare($sql);
@@ -268,6 +271,7 @@ final class ContractRepository
             'cdate' => (string)($data['cancellation_date'] ?? date('Y-m-d')),
             'cat' => (string)($data['cancelled_at'] ?? date('Y-m-d H:i:s')),
             'cby' => $data['cancelled_by'] ?? null,
+            'sepa' => !empty($data['sepa_cancelled']) ? 1 : 0,
             'id' => $id,
         ]);
     }

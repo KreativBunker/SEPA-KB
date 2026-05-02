@@ -640,6 +640,7 @@ final class SimplePdf
         }
 
         $mandateRef = trim((string)($data['mandate_reference'] ?? ''));
+        $sepaCancelled = !empty($data['sepa_cancelled']);
 
         $pdf = new \TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
         $pdf->setPrintHeader(false);
@@ -681,18 +682,8 @@ final class SimplePdf
         // Subject
         $pdf->SetXY(20, 95);
         $pdf->SetFont('helvetica', 'B', 13);
-        $subject = 'Kündigung Ihres Vertrags';
-        if ($contractId !== '') {
-            $subject .= ' Nr. ' . $contractId;
-        }
-        $pdf->Cell(0, 7, $subject, 0, 1, 'L');
-
-        if ($title !== '') {
-            $pdf->SetFont('helvetica', '', 11);
-            $pdf->SetTextColor(80, 80, 80);
-            $pdf->Cell(0, 5, 'Vertrag: ' . $title, 0, 1, 'L');
-            $pdf->SetTextColor(0, 0, 0);
-        }
+        $subject = $title !== '' ? 'Kündigung: ' . $title : 'Kündigung';
+        $pdf->MultiCell(0, 7, $subject, 0, 'L');
 
         $pdf->Ln(6);
 
@@ -709,8 +700,10 @@ final class SimplePdf
         }
         $body .= ' fristgerecht zum ' . ($cancellationDate !== '' ? $cancellationDate : $today) . '.';
 
-        if ($mandateRef !== '') {
+        if ($mandateRef !== '' && $sepaCancelled) {
             $body .= "\n\n" . 'Das zugehörige SEPA-Lastschriftmandat mit der Mandatsreferenz ' . $mandateRef . ' wird mit Wirkung zum genannten Datum widerrufen. Es werden nach diesem Datum keine weiteren Lastschriften mehr eingezogen.';
+        } elseif ($mandateRef !== '') {
+            $body .= "\n\n" . 'Das erteilte SEPA-Lastschriftmandat (Mandatsreferenz ' . $mandateRef . ') bleibt von dieser Vertragskündigung unberührt und besteht fort.';
         }
 
         if ($reason !== '') {
@@ -751,6 +744,7 @@ final class SimplePdf
         $pdf->Cell(0, 4, 'Beendigung zum: ' . ($cancellationDate !== '' ? $cancellationDate : $today), 0, 1, 'L');
         if ($mandateRef !== '') {
             $pdf->Cell(0, 4, 'Mandatsreferenz: ' . $mandateRef, 0, 1, 'L');
+            $pdf->Cell(0, 4, 'SEPA-Mandat: ' . ($sepaCancelled ? 'wird widerrufen' : 'bleibt bestehen'), 0, 1, 'L');
         }
         $cancelledAtRaw = trim((string)($data['cancelled_at'] ?? ''));
         if ($cancelledAtRaw !== '') {
