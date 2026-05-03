@@ -5,7 +5,7 @@ use App\Support\Flash;
 $messages = $messages ?? Flash::all();
 $__view = $__view ?? '';
 $__isDashboard = ($__view === 'dashboard');
-$__bodyClass = $__isDashboard ? 'is-dashboard' : 'is-modern';
+$__bodyClass = 'is-modern' . ($__isDashboard ? ' is-dashboard' : '');
 ?>
 <!doctype html>
 <html lang="de">
@@ -584,6 +584,123 @@ body.is-modern td a:hover { text-decoration: underline; }
 
 /* Show more breathing room on row gap */
 body.is-modern .row, body.is-modern .row3, body.is-modern .grid { gap: 14px; }
+
+/* ----- Listen: einzeilig + in Containerbreite ----- */
+body.is-modern .table-wrap { overflow-x: hidden; border-radius: 12px; }
+body.is-modern .table-wrap table,
+body.is-modern .mandates-table { min-width: 0; width: 100%; table-layout: auto; }
+
+/* Standardmaessig in der Tabelle: nicht umbrechen + Ellipsis */
+body.is-modern table td,
+body.is-modern table th {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 0; /* Trick: aktiviert Ellipsis bei auto-layout */
+  vertical-align: middle;
+}
+
+/* Zellen mit Buttons / Aktionen / Forms duerfen voll dargestellt werden */
+body.is-modern table td:has(.actions),
+body.is-modern table td:has(form),
+body.is-modern table td:has(.btn),
+body.is-modern table td:has(input),
+body.is-modern table th:last-child {
+  overflow: visible;
+  text-overflow: clip;
+  width: 1%;        /* an Inhalt schrumpfen */
+  max-width: none;
+  white-space: nowrap;
+}
+body.is-modern table td:has(.actions) .actions,
+body.is-modern table td:has(.btn) {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+body.is-modern .actions { flex-wrap: nowrap; }
+
+/* Pill- und Avatar-Zellen: Inhalt nicht abschneiden */
+body.is-modern table td:has(.pill),
+body.is-modern table td:has(.cust-avatar) {
+  overflow: visible;
+  text-overflow: clip;
+}
+
+/* IBAN/BIC: monospace, mit Ellipsis falls zu lang */
+body.is-modern td.mono,
+body.is-modern td.iban,
+body.is-modern td.bic {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .01em;
+}
+
+/* Customer-Zelle: zwei Zeilen darin (Name + Meta) sollen erhalten bleiben */
+body.is-modern table td:has(.cust) { white-space: normal; }
+body.is-modern .cust { flex-wrap: nowrap; }
+body.is-modern .cust-name,
+body.is-modern .cust-meta {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* Etwas kompaktere Tabellen-Paddings auf engen Listen */
+body.is-modern .mandates-table th,
+body.is-modern .mandates-table td { padding: 10px 12px; }
+
+/* ===== Dashboard im Modern-Stil ===== */
+body.is-modern.is-dashboard .kpi {
+  position: relative;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, .06);
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, .04),
+    0 12px 32px -16px rgba(15, 23, 42, .14);
+  overflow: hidden;
+}
+body.is-modern.is-dashboard .kpi::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+  background: linear-gradient(180deg, #1D3860, #4f46e5);
+}
+body.is-modern.is-dashboard .kpi-label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .07em;
+  color: #64748b; font-weight: 700;
+}
+body.is-modern.is-dashboard .kpi-value {
+  font-size: 30px; font-weight: 800; color: #0f172a;
+  letter-spacing: -.015em; line-height: 1.1; margin: 8px 0 4px;
+}
+body.is-modern.is-dashboard .kpi-sub { color: #64748b; font-size: 13px; }
+
+body.is-modern.is-dashboard .dash-hero {
+  background: linear-gradient(135deg, #ffffff 0%, #f4f6fb 100%);
+}
+body.is-modern.is-dashboard .dash-hero-text h1 {
+  background: linear-gradient(135deg, #1D3860 0%, #4f46e5 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+body.is-modern.is-dashboard .dash-action {
+  background: linear-gradient(180deg, #fafbfe 0%, #f4f6fb 100%);
+  border: 1px solid #e6ebf3; border-radius: 14px;
+}
+body.is-modern.is-dashboard .dash-step-body {
+  border-radius: 14px; border-color: #e6ebf3;
+  box-shadow: 0 8px 24px -16px rgba(15, 23, 42, .14);
+}
+body.is-modern.is-dashboard .dash-step.is-current .dash-step-body {
+  box-shadow: 0 12px 30px -14px rgba(29, 56, 96, .35);
+  border-color: #1D3860;
+}
+body.is-modern.is-dashboard .dash-warning {
+  border-radius: 12px; border: 1px solid transparent;
+}
+body.is-modern.is-dashboard .dash-warning.error { border-color: #fecaca; }
+body.is-modern.is-dashboard .dash-warning.warn  { border-color: #fde68a; }
+body.is-modern.is-dashboard .dash-warning.info  { border-color: #bfdbfe; }
 </style>
 </head>
 <body class="<?php echo htmlspecialchars($__bodyClass); ?><?php echo $__view === 'login' ? ' login-page' : ''; ?>">
