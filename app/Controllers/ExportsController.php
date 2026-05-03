@@ -392,6 +392,9 @@ if (!empty($_SESSION['invoices_cache']) && is_array($_SESSION['invoices_cache'])
     $_SESSION['invoices_cache'] = $cache;
 }
 
+// Auswahl nach Abschluss zurücksetzen
+unset($_SESSION['selected_invoice_ids']);
+
 Flash::add('success', 'Lauf abgeschlossen.');
         header('Location: ' . App::url('/exports/' . $id));
         exit;
