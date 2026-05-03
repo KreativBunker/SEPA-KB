@@ -15,7 +15,7 @@ $messages = $messages ?? Flash::all();
 body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 0; background: #f6f7fb; color: #1b1f24; }
 header { background: #1D3860; color: #fff; padding: 14px 18px; }
 header a { color: #fff; text-decoration: none; margin-right: 12px; font-weight: 600; }
-.wrap { max-width: 1100px; margin: 18px auto; padding: 0 14px; }
+.wrap { max-width: 1320px; margin: 18px auto; padding: 0 14px; }
 .card { background: #fff; border-radius: 12px; padding: 14px; box-shadow: 0 6px 18px rgba(0,0,0,.06); margin-bottom: 14px; }
 h1 { font-size: 22px; margin: 0 0 10px; }
 h2 { font-size: 18px; margin: 0 0 10px; }
@@ -70,6 +70,8 @@ th { background: #f3f5fb; font-size: 13px; text-transform: uppercase; letter-spa
 }
 .nav-dropdown-menu a:last-child { border-bottom: 0; }
 .nav-dropdown-menu a:hover { background: rgba(255,255,255,0.1); }
+.nav-secondary { font-weight: 500; opacity: 0.75; }
+.nav-secondary:hover { opacity: 1; }
 
 
 .table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -226,8 +228,8 @@ td { word-break: break-word; }
         <span class="nav-group">
           <a href="<?php echo App::url('/mandates'); ?>">Mandate</a>
           <a href="<?php echo App::url('/contracts'); ?>">Verträge</a>
-          <a href="<?php echo App::url('/invoices'); ?>">Rechnungen</a>
-          <a href="<?php echo App::url('/exports'); ?>">Exporte</a>
+          <a class="nav-secondary" href="<?php echo App::url('/invoices'); ?>">Rechnungen</a>
+          <a class="nav-secondary" href="<?php echo App::url('/exports'); ?>">Exporte</a>
         </span>
         <span class="nav-sep"></span>
         <span class="nav-dropdown">
