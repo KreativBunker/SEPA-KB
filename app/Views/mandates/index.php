@@ -1,17 +1,59 @@
 <?php
 use App\Support\App;
-?>
-<div class="card">
-  <div class="topbar">
-    <h1 style="margin:0;">Mandate</h1>
-    <div class="actions">
-      <a class="btn inline" href="<?php echo App::url('/mandates/create'); ?>">Mandat hinzufügen</a>
-      <a class="btn inline" href="<?php echo App::url('/online-mandates/create'); ?>">Online Link erstellen</a>
-      <a class="btn inline secondary" href="#import">Import</a>
-    </div>
-  </div>
 
-  <form method="get" action="<?php echo App::url('/mandates'); ?>" style="margin-top: 12px;">
+$itemsList = $items ?? [];
+$total = count($itemsList);
+$countActive = $countPaused = $countRevoked = 0;
+foreach ($itemsList as $row) {
+    switch ((string)($row['status'] ?? '')) {
+        case 'active':  $countActive++;  break;
+        case 'paused':  $countPaused++;  break;
+        case 'revoked': $countRevoked++; break;
+    }
+}
+
+function mandateInitials(string $name): string {
+    $name = trim($name);
+    if ($name === '') { return '?'; }
+    $parts = preg_split('/\s+/', $name) ?: [];
+    $first = mb_substr($parts[0] ?? '', 0, 1);
+    $last  = count($parts) > 1 ? mb_substr(end($parts), 0, 1) : '';
+    return $first . $last;
+}
+?>
+<div class="page-header">
+  <div class="page-header-text">
+    <h1>Mandate</h1>
+    <p>Übersicht aller SEPA-Lastschriftmandate, Status und offenen Online-Links.</p>
+  </div>
+  <div class="actions">
+    <a class="btn inline" href="<?php echo App::url('/mandates/create'); ?>">Mandat hinzufügen</a>
+    <a class="btn inline" href="<?php echo App::url('/online-mandates/create'); ?>">Online Link erstellen</a>
+    <a class="btn inline secondary" href="#import">Import</a>
+  </div>
+</div>
+
+<div class="stat-row">
+  <div class="stat-tile">
+    <span class="stat-tile-label">Gesamt</span>
+    <span class="stat-tile-value"><?php echo $total; ?></span>
+  </div>
+  <div class="stat-tile is-ok">
+    <span class="stat-tile-label">Aktiv</span>
+    <span class="stat-tile-value"><?php echo $countActive; ?></span>
+  </div>
+  <div class="stat-tile is-warn">
+    <span class="stat-tile-label">Pausiert</span>
+    <span class="stat-tile-value"><?php echo $countPaused; ?></span>
+  </div>
+  <div class="stat-tile is-err">
+    <span class="stat-tile-label">Widerrufen</span>
+    <span class="stat-tile-value"><?php echo $countRevoked; ?></span>
+  </div>
+</div>
+
+<div class="card">
+  <form method="get" action="<?php echo App::url('/mandates'); ?>" class="filter-bar">
     <div class="row">
       <div style="flex: 1;">
         <label>Suche</label>
@@ -57,7 +99,7 @@ use App\Support\App;
       </tr>
     </thead>
     <tbody>
-      <?php foreach (($items ?? []) as $it): ?>
+      <?php foreach ($itemsList as $it): ?>
         <?php
           $status = (string)($it['status'] ?? '');
           $statusClass = $status === 'active' ? 'ok' : ($status === 'paused' ? 'warn' : 'err');
@@ -68,8 +110,9 @@ use App\Support\App;
           ];
           $statusLabel = $statusLabels[$status] ?? $status;
           $srcLabel = (string)($it['source_label'] ?? '');
-          $srcClass = ((string)($it['source'] ?? '') === 'online') ? 'ok' : 'secondary';
+          $srcClass = ((string)($it['source'] ?? '') === 'online') ? 'primary' : 'secondary';
           $hasPdf = !empty($it['attachment_path']);
+          $rowClass = $status === 'revoked' ? 'is-revoked' : '';
           $rowStyle = $status === 'revoked' ? 'background:#fff5f5; color:#7a1f1f;' : '';
           $rowTitle = '';
           if ($status === 'revoked') {
@@ -78,12 +121,19 @@ use App\Support\App;
                   $rowTitle = $noteText;
               }
           }
+          $debtor = (string)($it['debtor_name'] ?? '');
+          $initials = mandateInitials($debtor);
         ?>
-        <tr style="<?php echo $rowStyle; ?>" <?php echo $rowTitle !== '' ? 'title="' . htmlspecialchars($rowTitle) . '"' : ''; ?>>
+        <tr class="<?php echo $rowClass; ?>" style="<?php echo $rowStyle; ?>" <?php echo $rowTitle !== '' ? 'title="' . htmlspecialchars($rowTitle) . '"' : ''; ?>>
           <td><span class="pill <?php echo $srcClass; ?>"><?php echo htmlspecialchars($srcLabel); ?></span></td>
           <td>
-            <?php echo htmlspecialchars((string)($it['debtor_name'] ?? '')); ?><br>
-            <span class="muted">Kontakt ID <?php echo (int)($it['sevdesk_contact_id'] ?? 0); ?></span>
+            <div class="cust">
+              <div class="cust-avatar"><?php echo htmlspecialchars($initials); ?></div>
+              <div class="cust-body">
+                <div class="cust-name"><?php echo htmlspecialchars($debtor); ?></div>
+                <div class="cust-meta">Kontakt ID <?php echo (int)($it['sevdesk_contact_id'] ?? 0); ?></div>
+              </div>
+            </div>
           </td>
           <td class="mono iban"><?php echo htmlspecialchars((string)($it['debtor_iban'] ?? '')); ?></td>
           <td class="mono bic"><?php echo htmlspecialchars((string)($it['debtor_bic'] ?? '')); ?></td>
@@ -108,8 +158,13 @@ use App\Support\App;
           </td>
         </tr>
       <?php endforeach; ?>
-      <?php if (empty($items)): ?>
-        <tr><td colspan="9" class="muted">Keine Daten</td></tr>
+      <?php if (empty($itemsList)): ?>
+        <tr><td colspan="9">
+          <div class="empty-state">
+            <div class="empty-state-title">Keine Mandate gefunden</div>
+            <div>Lege ein neues Mandat an oder passe die Suche an.</div>
+          </div>
+        </td></tr>
       <?php endif; ?>
     </tbody>
   </table></div>
