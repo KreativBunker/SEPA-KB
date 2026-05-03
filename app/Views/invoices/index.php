@@ -61,12 +61,12 @@
             <td>
               <input type="checkbox" name="invoice_ids[]" value="<?php echo (int)$inv['id']; ?>" <?php echo (!empty($inv['mandate_ok']) && empty($inv['completed'])) ? '' : 'disabled'; ?>>
             </td>
-            <td><?php echo (int)$inv['id']; ?></td>
-            <td><?php echo htmlspecialchars($inv['invoiceNumber']); ?></td>
+            <td class="nowrap"><?php echo (int)$inv['id']; ?></td>
+            <td class="nowrap"><?php echo htmlspecialchars($inv['invoiceNumber']); ?></td>
             <td><?php echo htmlspecialchars($inv['contact_name']); ?></td>
             <td><?php echo htmlspecialchars((string)($inv['payment_method'] ?? '')); ?></td>
-            <td><?php echo htmlspecialchars(number_format((float)$inv['sumGross'], 2, ',', '.')); ?> EUR</td>
-            <td><?php echo htmlspecialchars(\App\Support\DateFormatter::toDisplay((string)$inv['dueDate'])); ?></td>
+            <td class="nowrap" style="text-align:right;"><?php echo htmlspecialchars(number_format((float)$inv['sumGross'], 2, ',', '.')); ?> EUR</td>
+            <td class="nowrap"><?php echo htmlspecialchars(\App\Support\DateFormatter::toDisplay((string)$inv['dueDate'])); ?></td>
             <td>
               <?php if (!empty($inv['completed'])): ?>
                 <span class="pill ok">abgeschlossen</span>
