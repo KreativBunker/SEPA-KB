@@ -585,58 +585,55 @@ body.is-modern td a:hover { text-decoration: underline; }
 /* Show more breathing room on row gap */
 body.is-modern .row, body.is-modern .row3, body.is-modern .grid { gap: 14px; }
 
-/* ----- Listen: einzeilig + in Containerbreite ----- */
-body.is-modern .table-wrap { overflow-x: hidden; border-radius: 12px; }
+/* ----- Listen: ausgewogen + in Containerbreite ----- */
+body.is-modern .table-wrap { overflow-x: auto; border-radius: 12px; }
 body.is-modern .table-wrap table,
 body.is-modern .mandates-table { min-width: 0; width: 100%; table-layout: auto; }
 
-/* Standardmaessig in der Tabelle: nicht umbrechen + Ellipsis */
-body.is-modern table td,
+/* Header-Spaltentitel nie abschneiden */
 body.is-modern table th {
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 0; /* Trick: aktiviert Ellipsis bei auto-layout */
   vertical-align: middle;
 }
 
-/* Zellen mit Buttons / Aktionen / Forms duerfen voll dargestellt werden */
+/* Zellen duerfen umbrechen; lange Strings (URLs/IBAN) brechen sauber */
+body.is-modern table td {
+  vertical-align: middle;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Aktion-Spalten: einzeilig, schrumpfen auf Inhalt */
 body.is-modern table td:has(.actions),
 body.is-modern table td:has(form),
 body.is-modern table td:has(.btn),
-body.is-modern table td:has(input),
-body.is-modern table th:last-child {
-  overflow: visible;
-  text-overflow: clip;
-  width: 1%;        /* an Inhalt schrumpfen */
-  max-width: none;
+body.is-modern table td:has(input[type="checkbox"]) {
   white-space: nowrap;
-}
-body.is-modern table td:has(.actions) .actions,
-body.is-modern table td:has(.btn) {
-  flex-wrap: nowrap;
-  white-space: nowrap;
+  width: 1%;
 }
 body.is-modern .actions { flex-wrap: nowrap; }
 
-/* Pill- und Avatar-Zellen: Inhalt nicht abschneiden */
-body.is-modern table td:has(.pill),
-body.is-modern table td:has(.cust-avatar) {
-  overflow: visible;
-  text-overflow: clip;
+/* Status/Pill-Spalten: einzeilig, schrumpfen auf Inhalt */
+body.is-modern table td:has(> .pill:only-child) {
+  white-space: nowrap;
+  width: 1%;
 }
 
-/* IBAN/BIC: monospace, mit Ellipsis falls zu lang */
+/* Datums-/Zahlen-Spalten und IBAN/BIC bleiben einzeilig */
 body.is-modern td.mono,
 body.is-modern td.iban,
-body.is-modern td.bic {
+body.is-modern td.bic,
+body.is-modern td.nowrap {
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
   letter-spacing: .01em;
 }
+body.is-modern td.iban,
+body.is-modern td.bic { word-break: keep-all; overflow-wrap: normal; }
 
-/* Customer-Zelle: zwei Zeilen darin (Name + Meta) sollen erhalten bleiben */
-body.is-modern table td:has(.cust) { white-space: normal; }
-body.is-modern .cust { flex-wrap: nowrap; }
+/* Customer-Zelle */
+body.is-modern .cust { flex-wrap: nowrap; min-width: 0; }
+body.is-modern .cust-body { min-width: 0; }
 body.is-modern .cust-name,
 body.is-modern .cust-meta {
   white-space: nowrap;
@@ -645,9 +642,13 @@ body.is-modern .cust-meta {
   max-width: 100%;
 }
 
-/* Etwas kompaktere Tabellen-Paddings auf engen Listen */
+/* Etwas kompaktere Tabellen-Paddings */
 body.is-modern .mandates-table th,
 body.is-modern .mandates-table td { padding: 10px 12px; }
+
+/* Lange URL-Anzeigen sauber umbrechen */
+body.is-modern td a[href^="http"] + br + .muted,
+body.is-modern td .mono { word-break: break-all; }
 
 /* ===== Dashboard im Modern-Stil ===== */
 body.is-modern.is-dashboard .kpi {
