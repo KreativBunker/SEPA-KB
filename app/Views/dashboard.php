@@ -5,6 +5,18 @@ use App\Support\DateFormatter;
 $role = $role ?? '';
 $canStaff = in_array($role, ['admin', 'staff'], true);
 $hasSelection = (int)$selectedCount > 0;
+$hasMandates = (int)($mandateStats['active'] ?? 0) > 0;
+$hasInvoices = (int)$invoicesCount > 0;
+
+// Status pro Schritt: 'done' | 'current' | 'pending'
+$stepStatus = [
+    1 => $hasMandates ? 'done' : 'current',
+    2 => $hasInvoices ? 'done' : ($hasMandates ? 'current' : 'pending'),
+    3 => $hasSelection ? 'done' : ($hasInvoices ? 'current' : 'pending'),
+    4 => $hasSelection ? 'current' : 'pending',
+];
+
+$check = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="5 12 10 17 19 7"></polyline></svg>';
 ?>
 
 <div class="card dash-hero">
@@ -74,19 +86,29 @@ $hasSelection = (int)$selectedCount > 0;
 
 <?php if ($canStaff): ?>
 <div class="card">
-  <h2>Workflow</h2>
-  <p class="muted" style="margin-top:0">Reihenfolge: Kontakte/Mandate pflegen, Rechnungen laden, Auswahl treffen, Export erzeugen.</p>
+  <div class="dash-workflow-head">
+    <h2>SEPA-Lauf in 4 Schritten</h2>
+    <p class="muted">Folge der Reihenfolge — der nächste offene Schritt ist hervorgehoben.</p>
+  </div>
+
   <ol class="dash-steps">
-    <li class="dash-step">
-      <div class="dash-step-num">1</div>
+    <li class="dash-step is-<?php echo $stepStatus[1]; ?>">
+      <div class="dash-step-rail">
+        <div class="dash-step-bubble">
+          <?php if ($stepStatus[1] === 'done'): ?><?php echo $check; ?><?php else: ?>1<?php endif; ?>
+        </div>
+        <div class="dash-step-line"></div>
+      </div>
       <div class="dash-step-body">
         <div class="dash-step-head">
-          <h3>Kontakte aus sevdesk</h3>
-          <span class="muted">
-            <?php echo (int)$contactsCount; ?> im Cache · <?php echo (int)$contactsWithIban; ?> mit IBAN
-          </span>
+          <h3>Kontakte &amp; Mandate</h3>
+          <span class="dash-step-badge"><?php echo $stepStatus[1] === 'done' ? 'erledigt' : ($stepStatus[1] === 'current' ? 'als nächstes' : 'wartet'); ?></span>
         </div>
-        <p class="muted">Kontakte aus sevdesk laden und als SEPA-Mandate übernehmen. Nur einmalig oder bei neuen Kunden nötig.</p>
+        <p class="dash-step-desc">Kontakte einmalig aus sevdesk laden und als SEPA-Mandate anlegen.</p>
+        <div class="dash-step-meta muted">
+          <?php echo (int)($mandateStats['active'] ?? 0); ?> aktive Mandate ·
+          <?php echo (int)$contactsCount; ?> Kontakte im Cache
+        </div>
         <div class="actions">
           <a class="btn inline" href="<?php echo App::url('/mandates/import-sevdesk'); ?>">Kontakt-Import öffnen</a>
           <a class="btn inline secondary" href="<?php echo App::url('/mandates'); ?>">Mandate verwalten</a>
@@ -94,65 +116,85 @@ $hasSelection = (int)$selectedCount > 0;
       </div>
     </li>
 
-    <li class="dash-step">
-      <div class="dash-step-num">2</div>
+    <li class="dash-step is-<?php echo $stepStatus[2]; ?>">
+      <div class="dash-step-rail">
+        <div class="dash-step-bubble">
+          <?php if ($stepStatus[2] === 'done'): ?><?php echo $check; ?><?php else: ?>2<?php endif; ?>
+        </div>
+        <div class="dash-step-line"></div>
+      </div>
       <div class="dash-step-body">
         <div class="dash-step-head">
-          <h3>Rechnungen aus sevdesk laden</h3>
-          <span class="muted"><?php echo (int)$invoicesCount; ?> aktuell geladen</span>
+          <h3>Rechnungen laden</h3>
+          <span class="dash-step-badge"><?php echo $stepStatus[2] === 'done' ? 'erledigt' : ($stepStatus[2] === 'current' ? 'als nächstes' : 'wartet'); ?></span>
         </div>
-        <p class="muted">Offene Rechnungen aus sevdesk in den Arbeitsspeicher holen.</p>
+        <p class="dash-step-desc">Offene Rechnungen aus sevdesk in die Auswahl-Liste holen.</p>
+        <div class="dash-step-meta muted">
+          <?php echo (int)$invoicesCount; ?> Rechnungen geladen ·
+          Summe <?php echo number_format((float)$invoicesSum, 2, ',', '.'); ?> €
+        </div>
         <div class="actions">
           <form method="post" action="<?php echo App::url('/invoices/load'); ?>" style="display:inline;">
             <input type="hidden" name="_csrf" value="<?php echo htmlspecialchars($csrf); ?>">
-            <button type="submit" class="btn inline">Jetzt laden</button>
+            <button type="submit" class="btn inline">
+              <?php echo $hasInvoices ? 'Neu laden' : 'Jetzt laden'; ?>
+            </button>
           </form>
           <a class="btn inline secondary" href="<?php echo App::url('/invoices'); ?>">Liste öffnen</a>
         </div>
       </div>
     </li>
 
-    <li class="dash-step <?php echo $invoicesCount === 0 ? 'is-disabled' : ''; ?>">
-      <div class="dash-step-num">3</div>
+    <li class="dash-step is-<?php echo $stepStatus[3]; ?>">
+      <div class="dash-step-rail">
+        <div class="dash-step-bubble">
+          <?php if ($stepStatus[3] === 'done'): ?><?php echo $check; ?><?php else: ?>3<?php endif; ?>
+        </div>
+        <div class="dash-step-line"></div>
+      </div>
       <div class="dash-step-body">
         <div class="dash-step-head">
           <h3>Rechnungen auswählen</h3>
-          <span class="muted">
-            <?php if ($hasSelection): ?>
-              <?php echo (int)$selectedCount; ?> ausgewählt
-            <?php else: ?>
-              keine Auswahl
-            <?php endif; ?>
-          </span>
+          <span class="dash-step-badge"><?php echo $stepStatus[3] === 'done' ? 'erledigt' : ($stepStatus[3] === 'current' ? 'als nächstes' : 'wartet'); ?></span>
         </div>
-        <p class="muted">In der Rechnungsliste die zu lastschriftenden Posten markieren und „Auswahl speichern".</p>
+        <p class="dash-step-desc">Markiere die Rechnungen, die per Lastschrift eingezogen werden sollen.</p>
+        <div class="dash-step-meta muted">
+          <?php echo $hasSelection ? (int)$selectedCount . ' ausgewählt' : 'noch keine Auswahl'; ?>
+        </div>
         <div class="actions">
-          <a class="btn inline" href="<?php echo App::url('/invoices'); ?>">
-            <?php echo $hasSelection ? 'Auswahl bearbeiten' : 'Auswahl treffen'; ?>
-          </a>
+          <?php if ($hasInvoices): ?>
+            <a class="btn inline" href="<?php echo App::url('/invoices'); ?>">
+              <?php echo $hasSelection ? 'Auswahl bearbeiten' : 'Jetzt auswählen'; ?>
+            </a>
+          <?php else: ?>
+            <button type="button" class="btn inline" disabled title="Erst in Schritt 2 Rechnungen laden">Jetzt auswählen</button>
+          <?php endif; ?>
         </div>
       </div>
     </li>
 
-    <li class="dash-step <?php echo !$hasSelection ? 'is-disabled' : ''; ?>">
-      <div class="dash-step-num">4</div>
+    <li class="dash-step is-<?php echo $stepStatus[4]; ?> is-last">
+      <div class="dash-step-rail">
+        <div class="dash-step-bubble">4</div>
+      </div>
       <div class="dash-step-body">
         <div class="dash-step-head">
           <h3>Export erstellen</h3>
-          <span class="muted">SEPA pain.008 erzeugen</span>
+          <span class="dash-step-badge"><?php echo $stepStatus[4] === 'current' ? 'bereit' : 'wartet'; ?></span>
         </div>
-        <p class="muted">
+        <p class="dash-step-desc">SEPA pain.008-Datei aus der Auswahl erzeugen.</p>
+        <div class="dash-step-meta muted">
           <?php if ($hasSelection): ?>
-            Aus <?php echo (int)$selectedCount; ?> ausgewählten Rechnungen einen Lastschrift-Lauf anlegen.
+            <?php echo (int)$selectedCount; ?> Rechnungen bereit für den Export
           <?php else: ?>
-            Verfügbar, sobald in Schritt 3 mindestens eine Rechnung ausgewählt wurde.
+            Verfügbar, sobald Schritt 3 abgeschlossen ist
           <?php endif; ?>
-        </p>
+        </div>
         <div class="actions">
           <?php if ($hasSelection): ?>
-            <a class="btn inline" href="<?php echo App::url('/exports/create'); ?>">Neuer Export</a>
+            <a class="btn inline" href="<?php echo App::url('/exports/create'); ?>">Neuen Export anlegen</a>
           <?php else: ?>
-            <button type="button" class="btn inline" disabled>Neuer Export</button>
+            <button type="button" class="btn inline" disabled>Neuen Export anlegen</button>
           <?php endif; ?>
           <a class="btn inline secondary" href="<?php echo App::url('/exports'); ?>">Alle Exporte</a>
         </div>

@@ -101,16 +101,73 @@ td { word-break: break-word; }
 .dash-action-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; flex-wrap:wrap; }
 .dash-action-head h3 { margin:0; font-size:16px; }
 .dash-action p { margin:0; }
-.dash-steps { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px; }
-.dash-step { display:flex; gap:14px; align-items:flex-start; padding:14px; border:1px solid #edf0f6; border-radius:12px; background:#fafbfe; }
-.dash-step-num { flex:0 0 auto; width:36px; height:36px; border-radius:50%; background:#1D3860; color:#fff; font-weight:800; display:flex; align-items:center; justify-content:center; }
-.dash-step-body { flex:1 1 auto; display:flex; flex-direction:column; gap:6px; }
-.dash-step-head { display:flex; align-items:baseline; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+
+.dash-workflow-head { margin-bottom: 14px; }
+.dash-workflow-head h2 { margin: 0 0 4px; }
+.dash-workflow-head p { margin: 0; }
+
+.dash-steps { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:0; counter-reset: step; }
+.dash-step { display:flex; gap:16px; align-items:stretch; padding:0; border:0; background:transparent; position:relative; }
+.dash-step + .dash-step { margin-top: 4px; }
+
+.dash-step-rail { flex:0 0 44px; display:flex; flex-direction:column; align-items:center; padding-top: 2px; }
+.dash-step-bubble {
+  width:40px; height:40px; border-radius:50%;
+  background:#fff; color:#9ca3af;
+  border: 2px solid #e5e7eb;
+  font-weight:800; font-size:15px;
+  display:flex; align-items:center; justify-content:center;
+  flex:0 0 auto; transition: all .15s ease;
+}
+.dash-step-line { flex:1 1 auto; width:2px; background:#e5e7eb; margin-top:6px; min-height:20px; }
+.dash-step.is-last .dash-step-line { display:none; }
+
+.dash-step-body {
+  flex:1 1 auto; display:flex; flex-direction:column; gap:6px;
+  background:#fff; border:1px solid #edf0f6; border-radius:12px;
+  padding:14px 16px; margin-bottom:12px;
+  transition: all .15s ease;
+}
+.dash-step-head { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
 .dash-step-head h3 { margin:0; font-size:16px; }
-.dash-step p { margin:0; }
-.dash-step.is-disabled { opacity:0.55; }
-.dash-step.is-disabled .dash-step-num { background:#9ca3af; }
-.btn[disabled] { opacity:0.55; cursor:not-allowed; }
+.dash-step-desc { margin:0; color:#374151; font-size:14px; }
+.dash-step-meta { font-size:13px; }
+.dash-step-badge {
+  display:inline-block; font-size:11px; font-weight:700; text-transform:uppercase;
+  letter-spacing:.04em; padding:3px 9px; border-radius:999px;
+  background:#f3f4f6; color:#6b7280;
+}
+
+/* done */
+.dash-step.is-done .dash-step-bubble { background:#16a34a; color:#fff; border-color:#16a34a; }
+.dash-step.is-done .dash-step-line { background:#16a34a; }
+.dash-step.is-done .dash-step-badge { background:#dcfce7; color:#166534; }
+.dash-step.is-done .dash-step-body { background:#fafefb; border-color:#d1fae5; }
+
+/* current */
+.dash-step.is-current .dash-step-bubble {
+  background:#1D3860; color:#fff; border-color:#1D3860;
+  box-shadow:0 0 0 4px rgba(29,56,96,.15);
+}
+.dash-step.is-current .dash-step-badge { background:#dbeafe; color:#1e40af; }
+.dash-step.is-current .dash-step-body {
+  border-color:#1D3860; box-shadow:0 8px 22px rgba(29,56,96,.10);
+}
+.dash-step.is-current .dash-step-head h3 { color:#1D3860; }
+
+/* pending */
+.dash-step.is-pending .dash-step-body { opacity:0.7; }
+.dash-step.is-pending .dash-step-head h3 { color:#6b7280; }
+
+.btn[disabled] { opacity:0.5; cursor:not-allowed; pointer-events:none; }
+
+@media (max-width: 640px) {
+  .dash-step { gap:10px; }
+  .dash-step-rail { flex-basis:32px; }
+  .dash-step-bubble { width:32px; height:32px; font-size:13px; }
+  .dash-step-body { padding:12px; }
+  .dash-step-head { flex-direction:column; align-items:flex-start; gap:4px; }
+}
 .dash-warnings { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; }
 .dash-warning { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border-radius:10px; }
 .dash-warning.error { background:#fee2e2; color:#991b1b; }
