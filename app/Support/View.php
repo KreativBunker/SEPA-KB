@@ -8,6 +8,7 @@ final class View
     public static function render(string $view, array $data = []): void
     {
         extract($data, EXTR_SKIP);
+        $__view = $view;
 
         $basePath = App::basePath('app/Views');
         $file = $basePath . '/' . $view . '.php';
