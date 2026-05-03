@@ -596,11 +596,10 @@ body.is-modern table th {
   vertical-align: middle;
 }
 
-/* Zellen duerfen umbrechen; lange Strings (URLs/IBAN) brechen sauber */
+/* Zellen duerfen umbrechen; nur lange unteilbare Strings (URLs) brechen */
 body.is-modern table td {
   vertical-align: middle;
-  word-break: break-word;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 /* Aktion-Spalten: einzeilig, schrumpfen auf Inhalt */
@@ -647,8 +646,14 @@ body.is-modern .mandates-table th,
 body.is-modern .mandates-table td { padding: 10px 12px; }
 
 /* Lange URL-Anzeigen sauber umbrechen */
-body.is-modern td a[href^="http"] + br + .muted,
-body.is-modern td .mono { word-break: break-all; }
+body.is-modern td a[href^="http"] + br + .muted { word-break: break-all; }
+
+/* Key/Value-Tabellen (z.B. Update-Seite): erste Spalte nicht umbrechen */
+body.is-modern table:not(:has(thead)) td:first-child {
+  white-space: nowrap;
+  width: 1%;
+  padding-right: 18px;
+}
 
 /* ===== Dashboard im Modern-Stil ===== */
 body.is-modern.is-dashboard .kpi {
