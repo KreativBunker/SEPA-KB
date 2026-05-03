@@ -81,11 +81,12 @@ th { background: #f3f5fb; font-size: 13px; text-transform: uppercase; letter-spa
 td { word-break: break-word; }
 .mandates-table { min-width: 1180px; }
 .mandates-table th,
-.mandates-table td { padding: 12px 14px; }
+.mandates-table td { padding: 12px 14px; vertical-align: middle; }
 .mandates-table th { white-space: nowrap; }
 .mandates-table td { word-break: normal; }
 .mandates-table td.iban,
 .mandates-table td.bic { white-space: nowrap; }
+.mandates-table .actions { flex-wrap: nowrap; }
 .mandates-table tbody tr { transition: background-color .12s ease; }
 .mandates-table tbody tr:hover { background:#f8faff; }
 .mandates-table tbody tr.is-revoked:hover { background:#ffecec; }
