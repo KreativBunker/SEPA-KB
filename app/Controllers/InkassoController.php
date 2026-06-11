@@ -149,7 +149,7 @@ final class InkassoController
                 continue;
             }
 
-            $dueDate = substr((string)($inv['dueDate'] ?? ''), 0, 10);
+            $dueDate = substr(InkassoService::dueDateOf($inv), 0, 10);
             $dunnings = $dunningsByOrigin[$id] ?? [];
 
             $overdue = $dueDate !== '' && $dueDate < $today;
