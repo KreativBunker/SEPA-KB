@@ -84,6 +84,58 @@ curl_setopt_array($ch, [
         return $data;
     }
 
+    /**
+     * GET-Request, der die Antwort roh zurückgibt (für Endpunkte, die
+     * Dateien als Binary-Stream statt JSON liefern können).
+     *
+     * @return array{code:int, body:string}
+     */
+    private function requestRaw(string $path, array $query = []): array
+    {
+        $acc = $this->repo->getActive();
+        if (!$acc) {
+            throw new \RuntimeException('sevdesk ist nicht konfiguriert');
+        }
+        $crypto = new CryptoService();
+        $token = $crypto->decrypt($acc['api_token_encrypted']);
+
+        $baseUrl = rtrim($acc['base_url'], '/');
+        $url = $baseUrl . '/' . ltrim($path, '/');
+        if (!empty($query)) {
+            $url .= '?' . http_build_query($query);
+        }
+
+        $ch = curl_init($url);
+        if (!$ch) {
+            throw new \RuntimeException('cURL init fehlgeschlagen');
+        }
+
+        $headers = [];
+        $headerMode = $acc['header_mode'] ?? 'Authorization';
+        if ($headerMode === 'X-Authorization') {
+            $headers[] = 'X-Authorization: ' . $token;
+        } else {
+            $headers[] = 'Authorization: ' . $token;
+        }
+
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_TIMEOUT => 60,
+        ]);
+
+        $raw = curl_exec($ch);
+        $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err = curl_error($ch);
+        curl_close($ch);
+
+        if ($raw === false) {
+            throw new \RuntimeException('sevdesk request fehlgeschlagen: ' . $err);
+        }
+
+        return ['code' => $code, 'body' => (string)$raw];
+    }
+
     public function test(): array
     {
         // Contact list is a lightweight test
@@ -207,31 +259,62 @@ public function getPaymentMethod(int $id, ?string $embed = null): array
     /**
      * Liefert das Rechnungs-PDF als ['filename' => string, 'content' => binary].
      * preventSendBy=true verhindert, dass sevdesk den Belegstatus auf "versendet" setzt.
+     *
+     * sevdesk liefert je nach System entweder direkt den PDF-Binary-Stream
+     * oder ein JSON-Objekt mit Base64-Inhalt – beides wird unterstützt.
      */
     public function getInvoicePdf(int $invoiceId): array
     {
-        $res = $this->request('GET', '/Invoice/' . $invoiceId . '/getPdf', [
-            'download' => 'false',
+        $res = $this->requestRaw('/Invoice/' . $invoiceId . '/getPdf', [
+            'download' => 'true',
             'preventSendBy' => 'true',
         ]);
 
-        $obj = $res['objects'] ?? $res;
-        if (is_array($obj) && isset($obj[0])) {
-            $obj = $obj[0];
+        $body = $res['body'];
+
+        if ($res['code'] >= 400) {
+            $data = json_decode($body, true);
+            $msg = is_array($data) ? (string)($data['error']['message'] ?? ($data['message'] ?? 'HTTP ' . $res['code'])) : 'HTTP ' . $res['code'];
+            throw new \RuntimeException('sevdesk Fehler: ' . $msg);
         }
-        if (!is_array($obj) || empty($obj['content'])) {
+
+        // Variante 1: roher PDF-Stream
+        if (str_starts_with($body, '%PDF')) {
+            return [
+                'filename' => 'Rechnung_' . $invoiceId . '.pdf',
+                'content' => $body,
+            ];
+        }
+
+        // Variante 2: JSON mit Base64-Inhalt
+        $data = json_decode($body, true);
+        if (is_array($data)) {
+            $obj = $data['objects'] ?? $data;
+            if (is_array($obj) && isset($obj[0])) {
+                $obj = $obj[0];
+            }
+            if (is_array($obj) && !empty($obj['content'])) {
+                $content = base64_decode((string)$obj['content'], true);
+                if ($content !== false && $content !== '') {
+                    return [
+                        'filename' => (string)($obj['filename'] ?? ('Rechnung_' . $invoiceId . '.pdf')),
+                        'content' => $content,
+                    ];
+                }
+            }
             throw new \RuntimeException('sevdesk PDF-Antwort ist leer (Invoice ' . $invoiceId . ')');
         }
 
-        $content = base64_decode((string)$obj['content'], true);
-        if ($content === false || $content === '') {
-            throw new \RuntimeException('sevdesk PDF konnte nicht dekodiert werden (Invoice ' . $invoiceId . ')');
+        // Variante 3: Base64-String ohne JSON-Hülle
+        $decoded = base64_decode(trim($body), true);
+        if ($decoded !== false && str_starts_with($decoded, '%PDF')) {
+            return [
+                'filename' => 'Rechnung_' . $invoiceId . '.pdf',
+                'content' => $decoded,
+            ];
         }
 
-        return [
-            'filename' => (string)($obj['filename'] ?? ('Rechnung_' . $invoiceId . '.pdf')),
-            'content' => $content,
-        ];
+        throw new \RuntimeException('sevdesk PDF-Antwort hat ein unbekanntes Format (Invoice ' . $invoiceId . ', HTTP ' . $res['code'] . ')');
     }
 
     public function updateContactBankData(int $contactId, string $iban, ?string $bic = null): array
