@@ -58,10 +58,21 @@ final class InkassoService
             $res = $this->client->getDunnings($invoiceId);
             $objs = $res['objects'] ?? [];
             if (is_array($objs)) {
+                $seen = [];
                 foreach ($objs as $d) {
-                    if (is_array($d) && (int)($d['id'] ?? 0) > 0) {
-                        $dunnings[] = $d;
+                    if (!is_array($d)) {
+                        continue;
                     }
+                    $did = (int)($d['id'] ?? 0);
+                    // Ursprungsrechnung und Duplikate herausfiltern
+                    if ($did <= 0 || $did === $invoiceId || isset($seen[$did])) {
+                        continue;
+                    }
+                    if (($d['invoiceType'] ?? 'MA') !== 'MA') {
+                        continue;
+                    }
+                    $seen[$did] = true;
+                    $dunnings[] = $d;
                 }
             }
         } catch (\Throwable $e) {
