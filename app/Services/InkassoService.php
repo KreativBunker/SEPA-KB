@@ -144,7 +144,7 @@ final class InkassoService
             'invoice_id' => (int)$invoice['id'],
             'invoice_number' => $invoiceNumber,
             'invoice_date' => (string)($invoice['invoiceDate'] ?? ''),
-            'due_date' => (string)($invoice['dueDate'] ?? ''),
+            'due_date' => self::dueDateOf($invoice),
             'amount_original' => $amountOriginal,
             'amount_total' => $amountTotal,
             'currency' => $currency,
@@ -208,7 +208,9 @@ final class InkassoService
                 if ($dAmount > 0.0) {
                     $claim = $dAmount;
                 }
+                $dDue = self::dueDateOf($d);
                 $lines[] = '  ' . $this->dunningLabel($level) . ' vom ' . $fmtDate((string)($d['invoiceDate'] ?? ''))
+                    . ($dDue !== '' ? ', fällig am ' . $fmtDate($dDue) : '')
                     . ' (Nr. ' . (string)($d['invoiceNumber'] ?? '-') . ', Forderung '
                     . $fmtMoney($claim) . ' ' . (string)($h['currency'] ?? 'EUR') . ')';
             }
@@ -254,6 +256,33 @@ final class InkassoService
         }
 
         return $addr;
+    }
+
+    /**
+     * Fälligkeitsdatum eines Invoice-Objekts. Liefert sevdesk kein dueDate,
+     * wird es aus invoiceDate + Zahlungsziel (timeToPay in Tagen) abgeleitet.
+     */
+    public static function dueDateOf(array $inv): string
+    {
+        $due = trim((string)($inv['dueDate'] ?? ''));
+        if ($due !== '') {
+            return $due;
+        }
+
+        $invoiceDate = trim((string)($inv['invoiceDate'] ?? ''));
+        if ($invoiceDate === '') {
+            return '';
+        }
+
+        $timeToPay = $inv['timeToPay'] ?? null;
+        if (is_numeric($timeToPay)) {
+            $ts = strtotime(substr($invoiceDate, 0, 10) . ' +' . (int)$timeToPay . ' days');
+            if ($ts !== false) {
+                return date('Y-m-d', $ts);
+            }
+        }
+
+        return $invoiceDate;
     }
 
     /**
