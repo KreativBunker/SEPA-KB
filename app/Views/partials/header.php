@@ -556,7 +556,8 @@ body.is-modern details[open].card > summary::before { transform: rotate(90deg); 
 body.is-modern .muted { color: #64748b; }
 
 /* Login centering */
-body.is-modern.login-page .wrap { display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 140px); }
+body.is-modern.login-page > .wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: calc(100vh - 140px); }
+body.is-modern.login-page > .wrap .flash { width: 100%; max-width: 440px; }
 body.is-modern.login-page .card {
   max-width: 440px; width: 100%;
   padding: 32px 28px;
