@@ -199,11 +199,18 @@ final class InkassoService
         if (!empty($dunnings)) {
             $lines[] = 'Mahnverlauf:';
             $level = 0;
+            $claim = (float)($h['amount_original'] ?? 0);
             foreach ($dunnings as $d) {
                 $level++;
+                // Mahnbelege ohne eigene Mahngebühren haben in sevdesk Betrag 0 –
+                // dann gilt die Forderung der vorherigen Stufe weiter
+                $dAmount = self::invoiceAmount($d);
+                if ($dAmount > 0.0) {
+                    $claim = $dAmount;
+                }
                 $lines[] = '  ' . $this->dunningLabel($level) . ' vom ' . $fmtDate((string)($d['invoiceDate'] ?? ''))
-                    . ' (Nr. ' . (string)($d['invoiceNumber'] ?? '-') . ', Betrag '
-                    . $fmtMoney(self::invoiceAmount($d)) . ' ' . (string)($h['currency'] ?? 'EUR') . ')';
+                    . ' (Nr. ' . (string)($d['invoiceNumber'] ?? '-') . ', Forderung '
+                    . $fmtMoney($claim) . ' ' . (string)($h['currency'] ?? 'EUR') . ')';
             }
             $lines[] = '';
         }
