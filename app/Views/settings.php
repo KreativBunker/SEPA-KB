@@ -79,8 +79,72 @@
       <div></div>
     </div>
 
+    <h2 style="margin-top:24px">E-Mail / Inkasso</h2>
+    <p class="muted">SMTP-Zugangsdaten für den Versand von Inkasso-Übergaben sowie die E-Mail-Adresse des Inkassobüros.</p>
+
+    <div class="row">
+      <div>
+        <label>SMTP-Host</label>
+        <input name="smtp_host" value="<?php echo htmlspecialchars($settings['smtp_host'] ?? ''); ?>" placeholder="smtp.example.de">
+      </div>
+      <div>
+        <label>SMTP-Port</label>
+        <input name="smtp_port" value="<?php echo htmlspecialchars((string)($settings['smtp_port'] ?? 587)); ?>">
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Verschlüsselung</label>
+        <select name="smtp_encryption">
+          <option value="tls" <?php echo (($settings['smtp_encryption'] ?? 'tls') === 'tls') ? 'selected' : ''; ?>>STARTTLS (Port 587)</option>
+          <option value="ssl" <?php echo (($settings['smtp_encryption'] ?? '') === 'ssl') ? 'selected' : ''; ?>>SSL/TLS (Port 465)</option>
+          <option value="none" <?php echo (($settings['smtp_encryption'] ?? '') === 'none') ? 'selected' : ''; ?>>Keine</option>
+        </select>
+      </div>
+      <div>
+        <label>SMTP-Benutzer</label>
+        <input name="smtp_user" value="<?php echo htmlspecialchars($settings['smtp_user'] ?? ''); ?>">
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>SMTP-Passwort</label>
+        <input type="password" name="smtp_pass" value="" autocomplete="new-password" placeholder="<?php echo !empty($settings['smtp_pass_encrypted']) ? 'gespeichert – leer lassen zum Beibehalten' : ''; ?>">
+      </div>
+      <div>
+        <label>Absender-Adresse</label>
+        <input name="smtp_from_email" value="<?php echo htmlspecialchars($settings['smtp_from_email'] ?? ''); ?>" placeholder="buchhaltung@example.de">
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Absender-Name</label>
+        <input name="smtp_from_name" value="<?php echo htmlspecialchars($settings['smtp_from_name'] ?? ''); ?>">
+      </div>
+      <div>
+        <label>Inkassobüro E-Mail</label>
+        <input name="inkasso_email" value="<?php echo htmlspecialchars($settings['inkasso_email'] ?? ''); ?>" placeholder="forderungen@inkasso-beispiel.de">
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Test-Modus (nicht versenden, nur als Datei in storage/logs/mail ablegen)</label>
+        <input type="checkbox" name="smtp_test_mode" value="1" <?php echo !empty($settings['smtp_test_mode']) ? 'checked' : ''; ?>>
+      </div>
+      <div></div>
+    </div>
+
     <div style="margin-top:14px">
       <button class="btn" type="submit">Speichern</button>
     </div>
+  </form>
+
+  <form method="post" action="<?php echo \App\Support\App::url('/settings/smtp-test'); ?>" style="margin-top:10px">
+    <input type="hidden" name="_csrf" value="<?php echo htmlspecialchars($csrf); ?>">
+    <button class="btn inline secondary" type="submit">Test-E-Mail senden</button>
   </form>
 </div>

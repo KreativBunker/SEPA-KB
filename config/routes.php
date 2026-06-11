@@ -56,6 +56,11 @@ $router->get('/invoices', 'App\\Controllers\\InvoicesController@index', ['auth',
 $router->post('/invoices/load', 'App\\Controllers\\InvoicesController@load', ['auth','role:admin,staff']);
 $router->post('/invoices/select', 'App\\Controllers\\InvoicesController@select', ['auth','role:admin,staff']);
 
+$router->get('/inkasso', 'App\\Controllers\\InkassoController@index', ['auth','role:admin,staff']);
+$router->post('/inkasso/load', 'App\\Controllers\\InkassoController@load', ['auth','role:admin,staff']);
+$router->post('/inkasso/{id}/handover', 'App\\Controllers\\InkassoController@handover', ['auth','role:admin,staff']);
+$router->post('/settings/smtp-test', 'App\\Controllers\\InkassoController@smtpTest', ['auth','role:admin,staff']);
+
 $router->get('/exports', 'App\\Controllers\\ExportsController@index', ['auth','role:admin,staff']);
 $router->get('/exports/create', 'App\\Controllers\\ExportsController@create', ['auth','role:admin,staff']);
 $router->post('/exports', 'App\\Controllers\\ExportsController@store', ['auth','role:admin,staff']);
