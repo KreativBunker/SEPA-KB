@@ -258,7 +258,7 @@ final class InkassoController
             $handover = $service->buildHandover($invoiceId);
 
             $subject = 'Inkasso-Übergabe: Rechnung ' . $handover['invoice_number'] . ' – ' . $handover['debtor']['name'];
-            $text = $service->composeEmailText($handover);
+            $text = $service->composeEmailText($handover, (string)($settings['inkasso_signature'] ?? ''));
 
             $mailer = MailerFactory::fromSettings($settings);
             $mailer->send($inkassoEmail, $subject, $text, $handover['attachments']);
