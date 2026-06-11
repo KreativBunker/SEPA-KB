@@ -7,10 +7,9 @@ use App\Repositories\AuditLogRepository;
 use App\Repositories\InkassoHandoverRepository;
 use App\Repositories\SettingsRepository;
 use App\Repositories\SevdeskAccountRepository;
-use App\Services\CryptoService;
 use App\Services\InkassoService;
+use App\Services\MailerFactory;
 use App\Services\SevdeskClient;
-use App\Services\SmtpMailer;
 use App\Support\App;
 use App\Support\Auth;
 use App\Support\Csrf;
@@ -56,9 +55,7 @@ final class InkassoController
         }
 
         $settings = (new SettingsRepository())->get();
-        $mailReady = !empty($settings['inkasso_email'])
-            && !empty($settings['smtp_from_email'])
-            && (!empty($settings['smtp_host']) || !empty($settings['smtp_test_mode']));
+        $mailReady = !empty($settings['inkasso_email']) && MailerFactory::isConfigured($settings);
 
         View::render('inkasso/index', [
             'csrf' => Csrf::token(),
@@ -239,8 +236,8 @@ final class InkassoController
 
         $settings = (new SettingsRepository())->get();
         $inkassoEmail = trim((string)($settings['inkasso_email'] ?? ''));
-        if ($inkassoEmail === '' || empty($settings['smtp_from_email']) || (empty($settings['smtp_host']) && empty($settings['smtp_test_mode']))) {
-            Flash::add('error', 'Bitte zuerst in den Einstellungen SMTP und die Inkassobüro E-Mail konfigurieren.');
+        if ($inkassoEmail === '' || !MailerFactory::isConfigured($settings)) {
+            Flash::add('error', 'Bitte zuerst in den Einstellungen den E-Mail-Versand und die Inkassobüro E-Mail konfigurieren.');
             header('Location: ' . App::url('/inkasso'));
             exit;
         }
@@ -263,7 +260,7 @@ final class InkassoController
             $subject = 'Inkasso-Übergabe: Rechnung ' . $handover['invoice_number'] . ' – ' . $handover['debtor']['name'];
             $text = $service->composeEmailText($handover);
 
-            $mailer = new SmtpMailer($this->smtpConfig($settings));
+            $mailer = MailerFactory::fromSettings($settings);
             $mailer->send($inkassoEmail, $subject, $text, $handover['attachments']);
 
             $user = Auth::user();
@@ -324,8 +321,8 @@ final class InkassoController
         }
 
         try {
-            $mailer = new SmtpMailer($this->smtpConfig($settings));
-            $mailer->send($to, 'SEPA-KB Test-E-Mail', "Dies ist eine Test-E-Mail aus SEPA-KB.\nWenn diese Nachricht ankommt, ist der SMTP-Versand korrekt konfiguriert.");
+            $mailer = MailerFactory::fromSettings($settings);
+            $mailer->send($to, 'SEPA-KB Test-E-Mail', "Dies ist eine Test-E-Mail aus SEPA-KB.\nWenn diese Nachricht ankommt, ist der E-Mail-Versand korrekt konfiguriert.");
             $msg = 'Test-E-Mail an ' . $to . ' gesendet.';
             if (!empty($settings['smtp_test_mode'])) {
                 $msg .= ' Test-Modus: E-Mail wurde nur in storage/logs/mail abgelegt.';
@@ -338,29 +335,6 @@ final class InkassoController
 
         header('Location: ' . App::url('/settings'));
         exit;
-    }
-
-    private function smtpConfig(array $settings): array
-    {
-        $pass = '';
-        if (!empty($settings['smtp_pass_encrypted'])) {
-            try {
-                $pass = (new CryptoService())->decrypt((string)$settings['smtp_pass_encrypted']);
-            } catch (\Throwable $e) {
-                Logger::error('SMTP-Passwort konnte nicht entschlüsselt werden', $e);
-            }
-        }
-
-        return [
-            'host' => (string)($settings['smtp_host'] ?? ''),
-            'port' => (int)($settings['smtp_port'] ?? 587),
-            'encryption' => (string)($settings['smtp_encryption'] ?? 'tls'),
-            'user' => (string)($settings['smtp_user'] ?? ''),
-            'pass' => $pass,
-            'from_email' => (string)($settings['smtp_from_email'] ?? ''),
-            'from_name' => (string)($settings['smtp_from_name'] ?? ''),
-            'test_mode' => !empty($settings['smtp_test_mode']),
-        ];
     }
 
     private function extractContactName(array $contact): string
