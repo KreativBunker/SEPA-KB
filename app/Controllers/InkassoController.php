@@ -161,12 +161,12 @@ final class InkassoController
                 return strcmp((string)($a['invoiceDate'] ?? ''), (string)($b['invoiceDate'] ?? ''));
             });
 
-            $sumGross = (float)($inv['sumGross'] ?? 0);
+            $sumGross = InkassoService::invoiceAmount($inv);
             $totalClaim = $sumGross;
             $lastDunningDate = '';
             if (!empty($dunnings)) {
                 $last = $dunnings[count($dunnings) - 1];
-                $totalClaim = max($totalClaim, (float)($last['sumGross'] ?? 0));
+                $totalClaim = max($totalClaim, InkassoService::invoiceAmount($last));
                 $lastDunningDate = substr((string)($last['invoiceDate'] ?? ''), 0, 10);
             }
 

@@ -23,7 +23,7 @@ final class InkassoService
         }
 
         $invoiceNumber = (string)($invoice['invoiceNumber'] ?? $invoiceId);
-        $amountOriginal = (float)($invoice['sumGross'] ?? 0);
+        $amountOriginal = self::invoiceAmount($invoice);
         $currency = (string)($invoice['currency'] ?? 'EUR');
 
         // Schuldner inkl. Adresse
@@ -101,7 +101,7 @@ final class InkassoService
             $amountTotal = $amountOriginal;
             if (!empty($dunnings)) {
                 $last = $dunnings[count($dunnings) - 1];
-                $amountTotal = max($amountTotal, (float)($last['sumGross'] ?? 0));
+                $amountTotal = max($amountTotal, self::invoiceAmount($last));
             }
         }
 
@@ -203,7 +203,7 @@ final class InkassoService
                 $level++;
                 $lines[] = '  ' . $this->dunningLabel($level) . ' vom ' . $fmtDate((string)($d['invoiceDate'] ?? ''))
                     . ' (Nr. ' . (string)($d['invoiceNumber'] ?? '-') . ', Betrag '
-                    . $fmtMoney((float)($d['sumGross'] ?? 0)) . ' ' . (string)($h['currency'] ?? 'EUR') . ')';
+                    . $fmtMoney(self::invoiceAmount($d)) . ' ' . (string)($h['currency'] ?? 'EUR') . ')';
             }
             $lines[] = '';
         }
@@ -247,6 +247,22 @@ final class InkassoService
         }
 
         return $addr;
+    }
+
+    /**
+     * Bruttobetrag eines Invoice-Objekts mit Fallback-Kette – je nach
+     * sevdesk-System/Endpunkt ist sumGross leer und der Betrag steht
+     * in einem der Accounting-/Netto-Felder.
+     */
+    public static function invoiceAmount(array $inv): float
+    {
+        foreach (['sumGross', 'sumGrossAccounting', 'sumNet', 'sumNetAccounting', 'sum', 'amount'] as $key) {
+            $v = $inv[$key] ?? null;
+            if (is_numeric($v) && (float)$v != 0.0) {
+                return (float)$v;
+            }
+        }
+        return 0.0;
     }
 
     /**
