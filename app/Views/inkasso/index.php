@@ -56,9 +56,9 @@
             <td>
               <?php $level = (int)($inv['dunning_level'] ?? 0); ?>
               <?php if ($level >= 2): ?>
-                <span class="pill err"><?php echo $level; ?>. Mahnung</span>
+                <span class="pill err"><?php echo $level - 1; ?>. Mahnung</span>
               <?php elseif ($level === 1): ?>
-                <span class="pill warn">1. Mahnung</span>
+                <span class="pill warn">Zahlungserinnerung</span>
               <?php else: ?>
                 <span class="pill">keine</span>
               <?php endif; ?>
