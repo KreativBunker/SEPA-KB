@@ -41,8 +41,9 @@ final class SmtpMailer
 
     /**
      * @param array $attachments Liste von ['filename' => string, 'content' => binary, 'mime' => string]
+     * @param string|null $htmlBody optionale HTML-Variante (multipart/alternative mit $textBody als Fallback)
      */
-    public function send(string $to, string $subject, string $textBody, array $attachments = []): void
+    public function send(string $to, string $subject, string $textBody, array $attachments = [], ?string $htmlBody = null): void
     {
         $to = trim($to);
         if ($to === '' || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
@@ -52,7 +53,7 @@ final class SmtpMailer
             throw new \RuntimeException('Ungültige Absender-Adresse. Bitte SMTP-Einstellungen prüfen.');
         }
 
-        $message = $this->buildMessage($to, $subject, $textBody, $attachments);
+        $message = $this->buildMessage($to, $subject, $textBody, $attachments, $htmlBody);
 
         if ($this->testMode) {
             $this->writeEml($to, $message);
@@ -70,7 +71,7 @@ final class SmtpMailer
     // MIME
     // ------------------------------------------------------------------
 
-    private function buildMessage(string $to, string $subject, string $textBody, array $attachments): string
+    private function buildMessage(string $to, string $subject, string $textBody, array $attachments, ?string $htmlBody = null): string
     {
         $eol = "\r\n";
         $boundary = 'np_' . bin2hex(random_bytes(16));
@@ -90,11 +91,30 @@ final class SmtpMailer
 
         $body = 'This is a multi-part message in MIME format.' . $eol . $eol;
 
-        // Text-Teil
-        $body .= '--' . $boundary . $eol;
-        $body .= 'Content-Type: text/plain; charset=UTF-8' . $eol;
-        $body .= 'Content-Transfer-Encoding: base64' . $eol . $eol;
-        $body .= chunk_split(base64_encode($textBody), 76, $eol);
+        if ($htmlBody !== null && trim($htmlBody) !== '') {
+            // multipart/alternative: text/plain als Fallback + text/html
+            $altBoundary = 'alt_' . bin2hex(random_bytes(16));
+            $body .= '--' . $boundary . $eol;
+            $body .= 'Content-Type: multipart/alternative; boundary="' . $altBoundary . '"' . $eol . $eol;
+
+            $body .= '--' . $altBoundary . $eol;
+            $body .= 'Content-Type: text/plain; charset=UTF-8' . $eol;
+            $body .= 'Content-Transfer-Encoding: base64' . $eol . $eol;
+            $body .= chunk_split(base64_encode($textBody), 76, $eol);
+
+            $body .= '--' . $altBoundary . $eol;
+            $body .= 'Content-Type: text/html; charset=UTF-8' . $eol;
+            $body .= 'Content-Transfer-Encoding: base64' . $eol . $eol;
+            $body .= chunk_split(base64_encode($htmlBody), 76, $eol);
+
+            $body .= '--' . $altBoundary . '--' . $eol;
+        } else {
+            // Text-Teil
+            $body .= '--' . $boundary . $eol;
+            $body .= 'Content-Type: text/plain; charset=UTF-8' . $eol;
+            $body .= 'Content-Transfer-Encoding: base64' . $eol . $eol;
+            $body .= chunk_split(base64_encode($textBody), 76, $eol);
+        }
 
         foreach ($attachments as $att) {
             if (!is_array($att)) {

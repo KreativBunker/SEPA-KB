@@ -62,6 +62,17 @@ final class SettingsController
             return max(0, min(365, (int)($_POST[$field] ?? 7)));
         };
 
+        // WYSIWYG-Felder: HTML auf erlaubte Formatierungs-Tags reduzieren,
+        // reiner Text (Alt-Bestand) bleibt unverändert
+        $richField = static function (string $field): ?string {
+            $raw = str_replace(["\r\n", "\r"], "\n", (string)($_POST[$field] ?? ''));
+            if (\App\Support\HtmlText::isHtml($raw)) {
+                $clean = \App\Support\HtmlText::sanitize($raw);
+                return \App\Support\HtmlText::toPlain($clean) !== '' ? $clean : null;
+            }
+            return trim($raw) !== '' ? trim($raw) : null;
+        };
+
         $data = [
             'creditor_name' => trim((string)($_POST['creditor_name'] ?? '')),
             'creditor_id' => trim((string)($_POST['creditor_id'] ?? '')),
@@ -90,7 +101,7 @@ final class SettingsController
             'm365_tenant_id' => trim((string)($_POST['m365_tenant_id'] ?? '')) ?: null,
             'm365_client_id' => trim((string)($_POST['m365_client_id'] ?? '')) ?: null,
             'm365_client_secret_encrypted' => $m365SecretEncrypted,
-            'inkasso_signature' => trim(str_replace(["\r\n", "\r"], "\n", (string)($_POST['inkasso_signature'] ?? ''))) ?: null,
+            'inkasso_signature' => $richField('inkasso_signature'),
             'dunning_enabled' => !empty($_POST['dunning_enabled']) ? 1 : 0,
             'dunning_mode' => (($_POST['dunning_mode'] ?? 'review') === 'auto') ? 'auto' : 'review',
             'dunning_days_stage1' => $dunningDays('dunning_days_stage1'),
@@ -102,9 +113,9 @@ final class SettingsController
             'dunning_subject_1' => trim((string)($_POST['dunning_subject_1'] ?? '')) ?: null,
             'dunning_subject_2' => trim((string)($_POST['dunning_subject_2'] ?? '')) ?: null,
             'dunning_subject_3' => trim((string)($_POST['dunning_subject_3'] ?? '')) ?: null,
-            'dunning_body_1' => trim(str_replace(["\r\n", "\r"], "\n", (string)($_POST['dunning_body_1'] ?? ''))) ?: null,
-            'dunning_body_2' => trim(str_replace(["\r\n", "\r"], "\n", (string)($_POST['dunning_body_2'] ?? ''))) ?: null,
-            'dunning_body_3' => trim(str_replace(["\r\n", "\r"], "\n", (string)($_POST['dunning_body_3'] ?? ''))) ?: null,
+            'dunning_body_1' => $richField('dunning_body_1'),
+            'dunning_body_2' => $richField('dunning_body_2'),
+            'dunning_body_3' => $richField('dunning_body_3'),
         ];
 
         if ($data['creditor_name'] === '' || $data['creditor_id'] === '' || $data['creditor_iban'] === '') {
