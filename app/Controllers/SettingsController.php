@@ -80,6 +80,7 @@ final class SettingsController
             'm365_tenant_id' => trim((string)($_POST['m365_tenant_id'] ?? '')) ?: null,
             'm365_client_id' => trim((string)($_POST['m365_client_id'] ?? '')) ?: null,
             'm365_client_secret_encrypted' => $m365SecretEncrypted,
+            'inkasso_signature' => trim(str_replace(["\r\n", "\r"], "\n", (string)($_POST['inkasso_signature'] ?? ''))) ?: null,
         ];
 
         if ($data['creditor_name'] === '' || $data['creditor_id'] === '' || $data['creditor_iban'] === '') {

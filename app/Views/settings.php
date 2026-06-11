@@ -165,6 +165,9 @@
     </div>
     </div>
 
+    <label style="margin-top:10px">E-Mail-Signatur (wird ans Ende der Inkasso-E-Mail gesetzt)</label>
+    <textarea name="inkasso_signature" rows="5" placeholder="Mit freundlichen Grüßen&#10;&#10;Kreativbunker GmbH&#10;Buchhaltung&#10;Tel. ..."><?php echo htmlspecialchars($settings['inkasso_signature'] ?? ''); ?></textarea>
+
     <div class="row">
       <div>
         <label>Test-Modus (nicht versenden, nur als Datei in storage/logs/mail ablegen)</label>

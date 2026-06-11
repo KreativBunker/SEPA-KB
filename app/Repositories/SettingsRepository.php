@@ -25,6 +25,7 @@ final class SettingsRepository
         'm365_tenant_id' => 'VARCHAR(190) NULL',
         'm365_client_id' => 'VARCHAR(190) NULL',
         'm365_client_secret_encrypted' => 'TEXT NULL',
+        'inkasso_signature' => 'TEXT NULL',
     ];
 
     private function ensureColumns(): void
@@ -82,7 +83,8 @@ final class SettingsRepository
             mail_provider = :mail_provider,
             m365_tenant_id = :m365_tenant_id,
             m365_client_id = :m365_client_id,
-            m365_client_secret_encrypted = :m365_client_secret_encrypted
+            m365_client_secret_encrypted = :m365_client_secret_encrypted,
+            inkasso_signature = :inkasso_signature
             WHERE id = 1';
         $st = $pdo->prepare($sql);
         $st->execute($data);

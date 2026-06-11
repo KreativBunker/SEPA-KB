@@ -1,7 +1,8 @@
 -- Migration: Mahnwesen / Inkasso-Übergaben
 -- This migration is applied dynamically via ensureTable() in InkassoHandoverRepository.
--- The additional settings columns (smtp_*, inkasso_email, mail_provider, m365_*)
--- are applied dynamically via ensureColumns() in SettingsRepository.
+-- The additional settings columns (smtp_*, inkasso_email, inkasso_signature,
+-- mail_provider, m365_*) are applied dynamically via ensureColumns() in
+-- SettingsRepository.
 -- It is kept here for documentation and manual setup.
 
 CREATE TABLE IF NOT EXISTS inkasso_handovers (

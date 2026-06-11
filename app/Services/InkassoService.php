@@ -156,7 +156,7 @@ final class InkassoService
         ];
     }
 
-    public function composeEmailText(array $h): string
+    public function composeEmailText(array $h, string $signature = ''): string
     {
         $fmtMoney = static fn(float $v): string => number_format($v, 2, ',', '.');
         $fmtDate = static function (string $d): string {
@@ -222,7 +222,13 @@ final class InkassoService
             $lines[] = 'Hinweis: Folgende Belege konnten nicht angehängt werden: ' . implode(' / ', $h['pdf_errors']);
         }
         $lines[] = '';
-        $lines[] = 'Mit freundlichen Grüßen';
+
+        $signature = trim(str_replace(["\r\n", "\r"], "\n", $signature));
+        if ($signature !== '') {
+            $lines[] = $signature;
+        } else {
+            $lines[] = 'Mit freundlichen Grüßen';
+        }
 
         return implode("\n", $lines);
     }
