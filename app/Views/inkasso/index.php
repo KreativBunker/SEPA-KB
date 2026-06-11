@@ -35,9 +35,7 @@
           <th>Kunde</th>
           <th>Fällig</th>
           <th>Mahnstufe</th>
-          <th>Letzte Mahnung</th>
-          <th>Betrag</th>
-          <th>Gesamtforderung</th>
+          <th>Forderung</th>
           <th>Inkasso</th>
           <th>Aktion</th>
         </tr>
@@ -50,10 +48,10 @@
             <td class="nowrap">
               <?php echo htmlspecialchars(\App\Support\DateFormatter::toDisplay((string)$inv['dueDate'])); ?>
               <?php if ((int)($inv['days_overdue'] ?? 0) > 0): ?>
-                <span class="pill warn"><?php echo (int)$inv['days_overdue']; ?> Tage überfällig</span>
+                <div style="margin-top:4px"><span class="pill warn"><?php echo (int)$inv['days_overdue']; ?> Tage überfällig</span></div>
               <?php endif; ?>
             </td>
-            <td>
+            <td class="nowrap">
               <?php $level = (int)($inv['dunning_level'] ?? 0); ?>
               <?php if ($level >= 2): ?>
                 <span class="pill err"><?php echo $level - 1; ?>. Mahnung</span>
@@ -62,13 +60,20 @@
               <?php else: ?>
                 <span class="pill">keine</span>
               <?php endif; ?>
+              <?php if ($level > 0 && !empty($inv['last_dunning_date'])): ?>
+                <div class="muted" style="margin-top:4px">vom <?php echo htmlspecialchars(\App\Support\DateFormatter::toDisplay((string)$inv['last_dunning_date'])); ?></div>
+              <?php endif; ?>
             </td>
-            <td class="nowrap"><?php echo !empty($inv['last_dunning_date']) ? htmlspecialchars(\App\Support\DateFormatter::toDisplay((string)$inv['last_dunning_date'])) : '-'; ?></td>
-            <td class="nowrap" style="text-align:right;"><?php echo htmlspecialchars(number_format((float)$inv['sumGross'], 2, ',', '.')); ?> <?php echo htmlspecialchars((string)($inv['currency'] ?? 'EUR')); ?></td>
-            <td class="nowrap" style="text-align:right;"><?php echo htmlspecialchars(number_format((float)$inv['total_claim'], 2, ',', '.')); ?> <?php echo htmlspecialchars((string)($inv['currency'] ?? 'EUR')); ?></td>
-            <td>
+            <td class="nowrap" style="text-align:right;">
+              <?php echo htmlspecialchars(number_format((float)$inv['total_claim'], 2, ',', '.')); ?> <?php echo htmlspecialchars((string)($inv['currency'] ?? 'EUR')); ?>
+              <?php if ((float)$inv['total_claim'] > (float)$inv['sumGross']): ?>
+                <div class="muted" style="margin-top:4px">Rechnung: <?php echo htmlspecialchars(number_format((float)$inv['sumGross'], 2, ',', '.')); ?> <?php echo htmlspecialchars((string)($inv['currency'] ?? 'EUR')); ?></div>
+              <?php endif; ?>
+            </td>
+            <td class="nowrap">
               <?php if (!empty($inv['handed_over'])): ?>
-                <span class="pill ok">übergeben am <?php echo htmlspecialchars(\App\Support\DateFormatter::toDisplay(substr((string)$inv['handed_over_at'], 0, 10))); ?></span>
+                <span class="pill ok">übergeben</span>
+                <div class="muted" style="margin-top:4px">am <?php echo htmlspecialchars(\App\Support\DateFormatter::toDisplay(substr((string)$inv['handed_over_at'], 0, 10))); ?></div>
               <?php else: ?>
                 <span class="pill">offen</span>
               <?php endif; ?>
@@ -90,7 +95,7 @@
           </tr>
         <?php endforeach; ?>
         <?php if (empty($invoices)): ?>
-          <tr><td colspan="9" class="muted">Keine Daten geladen. Klicke oben auf sevdesk laden.</td></tr>
+          <tr><td colspan="7" class="muted">Keine Daten geladen. Klicke oben auf sevdesk laden.</td></tr>
         <?php endif; ?>
       </tbody>
     </table>
