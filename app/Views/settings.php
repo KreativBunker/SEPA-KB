@@ -1,3 +1,36 @@
+<?php
+// Kleiner WYSIWYG-Editor (contenteditable) für formatierte E-Mail-Texte.
+// Der HTML-Inhalt wird in das versteckte Textarea synchronisiert und
+// serverseitig auf erlaubte Formatierungs-Tags reduziert.
+$wysField = static function (string $name, string $value, string $placeholder = ''): void {
+    ?>
+    <div class="wys" data-placeholder="<?php echo htmlspecialchars($placeholder); ?>">
+      <div class="wys-toolbar">
+        <button type="button" data-cmd="bold" title="Fett"><b>F</b></button>
+        <button type="button" data-cmd="italic" title="Kursiv"><i>K</i></button>
+        <button type="button" data-cmd="underline" title="Unterstrichen"><u>U</u></button>
+        <button type="button" data-cmd="strikeThrough" title="Durchgestrichen"><s>S</s></button>
+        <button type="button" data-cmd="insertUnorderedList" title="Aufzählung">&bull; Liste</button>
+        <button type="button" data-cmd="insertOrderedList" title="Nummerierte Liste">1. Liste</button>
+        <button type="button" data-cmd="createLink" title="Link einfügen">Link</button>
+        <button type="button" data-cmd="removeFormat" title="Formatierung entfernen">Format löschen</button>
+      </div>
+      <div class="wys-editor" contenteditable="true"></div>
+      <textarea name="<?php echo htmlspecialchars($name); ?>" style="display:none"><?php echo htmlspecialchars($value); ?></textarea>
+    </div>
+    <?php
+};
+?>
+<style>
+.wys { border: 1px solid #d8dde6; border-radius: 10px; background: #fff; overflow: hidden; }
+.wys-toolbar { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 8px; border-bottom: 1px solid #edf0f6; background: #f6f8fc; }
+.wys-toolbar button { background: #fff; border: 1px solid #d8dde6; border-radius: 7px; padding: 4px 9px; font-size: 12.5px; cursor: pointer; color: #334155; }
+.wys-toolbar button:hover { background: #eef2f9; }
+.wys-editor { min-height: 110px; padding: 10px 12px; font-size: 14.5px; line-height: 1.5; outline: none; }
+.wys-editor:empty::before { content: attr(data-ph); color: #94a3b8; }
+.wys-editor ul, .wys-editor ol { margin: 6px 0; padding-left: 22px; }
+.wys-editor a { color: #1D3860; }
+</style>
 <div class="card">
   <h1>Einstellungen</h1>
   <form method="post" action="<?php echo \App\Support\App::url('/settings'); ?>">
@@ -165,8 +198,8 @@
     </div>
     </div>
 
-    <label style="margin-top:10px">E-Mail-Signatur (wird ans Ende der Inkasso-E-Mail gesetzt)</label>
-    <textarea name="inkasso_signature" rows="5" placeholder="Mit freundlichen Grüßen&#10;&#10;Kreativbunker GmbH&#10;Buchhaltung&#10;Tel. ..."><?php echo htmlspecialchars($settings['inkasso_signature'] ?? ''); ?></textarea>
+    <label style="margin-top:10px">E-Mail-Signatur (wird an Mahnungen und Inkasso-E-Mails angehängt)</label>
+    <?php $wysField('inkasso_signature', (string)($settings['inkasso_signature'] ?? ''), 'Mit freundlichen Grüßen – Kreativbunker GmbH, Buchhaltung, Tel. ...'); ?>
 
     <div class="row">
       <div>
@@ -238,17 +271,17 @@
     <label>Betreff Zahlungserinnerung</label>
     <input name="dunning_subject_1" value="<?php echo htmlspecialchars($settings['dunning_subject_1'] ?? ''); ?>" placeholder="Zahlungserinnerung zur Rechnung {invoice_number}">
     <label>Text Zahlungserinnerung</label>
-    <textarea name="dunning_body_1" rows="4" placeholder="Standardtext wird verwendet, wenn leer"><?php echo htmlspecialchars($settings['dunning_body_1'] ?? ''); ?></textarea>
+    <?php $wysField('dunning_body_1', (string)($settings['dunning_body_1'] ?? ''), 'Standardtext wird verwendet, wenn leer'); ?>
 
     <label>Betreff 1. Mahnung</label>
     <input name="dunning_subject_2" value="<?php echo htmlspecialchars($settings['dunning_subject_2'] ?? ''); ?>" placeholder="1. Mahnung zur Rechnung {invoice_number}">
     <label>Text 1. Mahnung</label>
-    <textarea name="dunning_body_2" rows="4" placeholder="Standardtext wird verwendet, wenn leer"><?php echo htmlspecialchars($settings['dunning_body_2'] ?? ''); ?></textarea>
+    <?php $wysField('dunning_body_2', (string)($settings['dunning_body_2'] ?? ''), 'Standardtext wird verwendet, wenn leer'); ?>
 
     <label>Betreff 2. Mahnung</label>
     <input name="dunning_subject_3" value="<?php echo htmlspecialchars($settings['dunning_subject_3'] ?? ''); ?>" placeholder="2. Mahnung zur Rechnung {invoice_number}">
     <label>Text 2. Mahnung</label>
-    <textarea name="dunning_body_3" rows="4" placeholder="Standardtext wird verwendet, wenn leer"><?php echo htmlspecialchars($settings['dunning_body_3'] ?? ''); ?></textarea>
+    <?php $wysField('dunning_body_3', (string)($settings['dunning_body_3'] ?? ''), 'Standardtext wird verwendet, wenn leer'); ?>
 
     <div style="margin-top:14px">
       <button class="btn" type="submit">Speichern</button>
@@ -260,3 +293,42 @@
     <button class="btn inline secondary" type="submit">Test-E-Mail senden</button>
   </form>
 </div>
+
+<script>
+document.querySelectorAll('.wys').forEach(function (wrap) {
+  var ta = wrap.querySelector('textarea');
+  var ed = wrap.querySelector('.wys-editor');
+  ed.setAttribute('data-ph', wrap.getAttribute('data-placeholder') || '');
+
+  // Alt-Bestand ohne HTML: Zeilenumbrüche als <br> darstellen
+  var val = ta.value;
+  if (val && val.indexOf('<') === -1) {
+    var esc = document.createElement('div');
+    esc.textContent = val;
+    val = esc.innerHTML.replace(/\n/g, '<br>');
+  }
+  ed.innerHTML = val;
+
+  function sync() { ta.value = ed.innerHTML.trim(); }
+
+  wrap.querySelectorAll('.wys-toolbar button').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      ed.focus();
+      var cmd = btn.getAttribute('data-cmd');
+      if (cmd === 'createLink') {
+        var url = prompt('Link-Adresse (https://... oder mailto:...):', 'https://');
+        if (url) document.execCommand('createLink', false, url);
+      } else {
+        document.execCommand(cmd, false, null);
+      }
+      sync();
+    });
+  });
+
+  ed.addEventListener('input', sync);
+  ed.addEventListener('blur', sync);
+  var form = wrap.closest('form');
+  if (form) form.addEventListener('submit', sync);
+});
+</script>

@@ -25,6 +25,7 @@ Die App kann Zahlungserinnerungen und Mahnungen automatisch erzeugen und versend
 - Ab der 2. Mahnung erscheint die Rechnung im Mahnwesen zur manuellen Inkasso-Übergabe.
 - Rechnungen mit Zahlungsart SEPA-Lastschrift oder aktivem Mandat werden ausgenommen (einstellbar), zusätzlich gibt es eine Ausschlussliste je Rechnung/Kontakt.
 - Modus „Mit Freigabe": der Lauf merkt Mahnungen nur vor, der Versand erfolgt nach Freigabe unter „Mahnautomatik". Modus „Vollautomatisch": der Cron-Lauf versendet direkt.
+- Mahntexte und Signatur lassen sich im WYSIWYG-Editor formatieren (fett, kursiv, Listen, Links); die E-Mails gehen als HTML mit Plaintext-Fallback raus. Das Mahn-PDF wird von sevDesk erzeugt und von der App als Anhang mitgesendet.
 
 Aktivierung unter Einstellungen → Mahnwesen-Automatik. Der Mahnlauf muss einmal täglich angestoßen werden, wahlweise:
 

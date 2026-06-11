@@ -36,8 +36,9 @@ final class GraphMailer
 
     /**
      * @param array $attachments Liste von ['filename' => string, 'content' => binary, 'mime' => string]
+     * @param string|null $htmlBody optionale HTML-Variante (ersetzt den Text-Body in Graph)
      */
-    public function send(string $to, string $subject, string $textBody, array $attachments = []): void
+    public function send(string $to, string $subject, string $textBody, array $attachments = [], ?string $htmlBody = null): void
     {
         $to = trim($to);
         if ($to === '' || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
@@ -47,7 +48,7 @@ final class GraphMailer
             throw new \RuntimeException('Ungültige Absender-Adresse. Bitte E-Mail-Einstellungen prüfen.');
         }
 
-        $payload = $this->buildPayload($to, $subject, $textBody, $attachments);
+        $payload = $this->buildPayload($to, $subject, $textBody, $attachments, $htmlBody);
 
         if ($this->testMode) {
             $this->writeJson($to, $payload);
@@ -62,7 +63,7 @@ final class GraphMailer
         $this->sendMail($token, $payload);
     }
 
-    private function buildPayload(string $to, string $subject, string $textBody, array $attachments): array
+    private function buildPayload(string $to, string $subject, string $textBody, array $attachments, ?string $htmlBody = null): array
     {
         $graphAttachments = [];
         foreach ($attachments as $att) {
@@ -81,11 +82,12 @@ final class GraphMailer
             ];
         }
 
+        $useHtml = $htmlBody !== null && trim($htmlBody) !== '';
         $message = [
             'subject' => $subject,
             'body' => [
-                'contentType' => 'Text',
-                'content' => $textBody,
+                'contentType' => $useHtml ? 'HTML' : 'Text',
+                'content' => $useHtml ? $htmlBody : $textBody,
             ],
             'toRecipients' => [
                 ['emailAddress' => ['address' => $to]],

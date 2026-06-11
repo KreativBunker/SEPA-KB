@@ -9,6 +9,7 @@ use App\Repositories\DunningRunRepository;
 use App\Repositories\MandateRepository;
 use App\Repositories\SettingsRepository;
 use App\Support\DateFormatter;
+use App\Support\HtmlText;
 use App\Support\Logger;
 
 /**
@@ -433,7 +434,7 @@ final class DunningService
 
             $placeholders = $this->placeholders($action, $settings);
             $subject = $this->renderTemplate($this->subjectTemplate($stage, $settings), $placeholders);
-            $body = $this->composeBody($stage, $settings, $placeholders);
+            [$bodyText, $bodyHtml] = $this->composeBodies($stage, $settings, $placeholders);
 
             // d) Testmodus: keine Schreiboperationen in sevdesk; die E-Mail
             //    landet über den Mailer ohnehin nur in storage/logs/mail.
@@ -441,11 +442,11 @@ final class DunningService
             if (!empty($settings['smtp_test_mode'])) {
                 $pdf = $this->client->getInvoicePdf($invoiceId);
                 $mailer = MailerFactory::fromSettings($settings);
-                $mailer->send($email, '[TEST] ' . $subject, $body, [[
+                $mailer->send($email, '[TEST] ' . $subject, $bodyText, [[
                     'filename' => $pdf['filename'],
                     'content' => $pdf['content'],
                     'mime' => 'application/pdf',
-                ]]);
+                ]], $bodyHtml);
                 $log('[TEST] Würde ' . $this->stageLabel($stage) . ' für Rechnung ' . $label . ' an ' . $email . ' senden (E-Mail in storage/logs/mail abgelegt, kein Beleg in sevdesk erzeugt).');
                 return 'test';
             }
@@ -473,11 +474,11 @@ final class DunningService
 
             // g) E-Mail versenden – erst danach den Beleg finalisieren
             $mailer = MailerFactory::fromSettings($settings);
-            $mailer->send($email, $subject, $body, [[
+            $mailer->send($email, $subject, $bodyText, [[
                 'filename' => $this->attachmentName($stage, $label),
                 'content' => $pdf['content'],
                 'mime' => 'application/pdf',
-            ]]);
+            ]], $bodyHtml);
 
             // h) Beleg in sevdesk als versendet markieren
             $this->client->invoiceSendBy($reminderId, 'VM');
@@ -587,18 +588,42 @@ final class DunningService
         return str_replace($search, $replace, $template);
     }
 
-    private function composeBody(int $stage, array $settings, array $placeholders): string
+    /**
+     * Baut den Mahntext als [Plaintext, HTML]. Vorlage und Signatur können
+     * aus dem WYSIWYG-Editor als HTML kommen oder (Alt-Bestand/Defaults)
+     * reiner Text sein – beides wird in beide Varianten überführt.
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function composeBodies(int $stage, array $settings, array $placeholders): array
     {
-        $body = $this->renderTemplate($this->bodyTemplate($stage, $settings), $placeholders);
+        $tpl = $this->bodyTemplate($stage, $settings);
 
-        $signature = trim(str_replace(["\r\n", "\r"], "\n", (string)($settings['inkasso_signature'] ?? '')));
-        if ($signature !== '') {
-            $body .= "\n\n" . $signature;
+        if (HtmlText::isHtml($tpl)) {
+            $htmlPlaceholders = array_map(
+                static fn($v): string => htmlspecialchars((string)$v, ENT_QUOTES),
+                $placeholders
+            );
+            $bodyHtml = $this->renderTemplate($tpl, $htmlPlaceholders);
+            $bodyText = $this->renderTemplate(HtmlText::toPlain($tpl), $placeholders);
         } else {
-            $body .= "\n\nMit freundlichen Grüßen";
+            $bodyText = $this->renderTemplate($tpl, $placeholders);
+            $bodyHtml = HtmlText::fromPlain($bodyText);
         }
 
-        return $body;
+        $signature = trim(str_replace(["\r\n", "\r"], "\n", (string)($settings['inkasso_signature'] ?? '')));
+        if ($signature === '') {
+            $signature = 'Mit freundlichen Grüßen';
+        }
+        $sig = HtmlText::variants($signature);
+
+        $bodyText .= "\n\n" . $sig['text'];
+        $bodyHtml .= '<br><br>' . $sig['html'];
+
+        $bodyHtml = '<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#1b1f24">'
+            . $bodyHtml . '</div>';
+
+        return [$bodyText, $bodyHtml];
     }
 
     private function placeholders(array $action, array $settings): array
