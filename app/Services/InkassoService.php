@@ -123,15 +123,16 @@ final class InkassoService
         foreach ($dunnings as $d) {
             $level++;
             $dNumber = (string)($d['invoiceNumber'] ?? $d['id']);
+            $label = $this->dunningFileLabel($level);
             try {
                 $pdf = $this->client->getInvoicePdf((int)$d['id']);
                 $attachments[] = [
-                    'filename' => 'Mahnung_' . $level . '_' . $this->safeFilename($dNumber) . '.pdf',
+                    'filename' => $label . '_' . $this->safeFilename($dNumber) . '.pdf',
                     'content' => $pdf['content'],
                     'mime' => 'application/pdf',
                 ];
             } catch (\Throwable $e) {
-                $pdfErrors[] = 'Mahnung ' . $dNumber . ': ' . $e->getMessage();
+                $pdfErrors[] = $this->dunningLabel($level) . ' ' . $dNumber . ': ' . $e->getMessage();
             }
         }
 
@@ -190,7 +191,8 @@ final class InkassoService
         $lines[] = '  Fällig am: ' . $fmtDate((string)($h['due_date'] ?? ''));
         $lines[] = '  Rechnungsbetrag: ' . $fmtMoney((float)($h['amount_original'] ?? 0)) . ' ' . (string)($h['currency'] ?? 'EUR');
         $lines[] = '  Gesamtforderung inkl. Mahnungen: ' . $fmtMoney((float)($h['amount_total'] ?? 0)) . ' ' . (string)($h['currency'] ?? 'EUR');
-        $lines[] = '  Mahnstufe: ' . (int)($h['dunning_level'] ?? 0);
+        $levelTotal = (int)($h['dunning_level'] ?? 0);
+        $lines[] = '  Mahnstufe: ' . $levelTotal . ($levelTotal > 0 ? ' (' . $this->dunningLabel($levelTotal) . ')' : '');
         $lines[] = '';
 
         $dunnings = $h['dunnings'] ?? [];
@@ -199,14 +201,14 @@ final class InkassoService
             $level = 0;
             foreach ($dunnings as $d) {
                 $level++;
-                $lines[] = '  ' . $level . '. Mahnung vom ' . $fmtDate((string)($d['invoiceDate'] ?? ''))
+                $lines[] = '  ' . $this->dunningLabel($level) . ' vom ' . $fmtDate((string)($d['invoiceDate'] ?? ''))
                     . ' (Nr. ' . (string)($d['invoiceNumber'] ?? '-') . ', Betrag '
                     . $fmtMoney((float)($d['sumGross'] ?? 0)) . ' ' . (string)($h['currency'] ?? 'EUR') . ')';
             }
             $lines[] = '';
         }
 
-        $lines[] = 'Die Rechnung sowie alle Mahnungen finden Sie als PDF im Anhang.';
+        $lines[] = 'Die Rechnung, die Zahlungserinnerung sowie alle Mahnungen finden Sie als PDF im Anhang.';
         if (!empty($h['pdf_errors'])) {
             $lines[] = 'Hinweis: Folgende Belege konnten nicht angehängt werden: ' . implode(' / ', $h['pdf_errors']);
         }
@@ -245,6 +247,29 @@ final class InkassoService
         }
 
         return $addr;
+    }
+
+    /**
+     * In sevdesk ist die erste Mahnstufe eine Zahlungserinnerung,
+     * erst ab der zweiten Stufe handelt es sich um echte Mahnungen.
+     */
+    public function dunningLabel(int $level): string
+    {
+        if ($level <= 0) {
+            return 'keine';
+        }
+        if ($level === 1) {
+            return 'Zahlungserinnerung';
+        }
+        return ($level - 1) . '. Mahnung';
+    }
+
+    private function dunningFileLabel(int $level): string
+    {
+        if ($level === 1) {
+            return 'Zahlungserinnerung';
+        }
+        return 'Mahnung_' . ($level - 1);
     }
 
     private function safeFilename(string $name): string
