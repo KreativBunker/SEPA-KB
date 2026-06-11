@@ -183,6 +183,57 @@ public function getPaymentMethod(int $id, ?string $embed = null): array
 }
 
 
+    public function getDunningInvoices(int $limit = 200, int $offset = 0): array
+    {
+        // Mahnungen sind Invoice-Objekte mit invoiceType=MA, origin verweist auf die Ursprungsrechnung
+        return $this->request('GET', '/Invoice', [
+            'invoiceType' => 'MA',
+            'limit' => $limit,
+            'offset' => $offset,
+            'embed' => 'origin',
+        ]);
+    }
+
+    public function getDunnings(int $invoiceId): array
+    {
+        return $this->request('GET', '/Invoice/' . $invoiceId . '/getDunnings');
+    }
+
+    public function getInvoiceAndReminderAmount(int $invoiceId): array
+    {
+        return $this->request('GET', '/Invoice/' . $invoiceId . '/getInvoiceAndReminderAmount');
+    }
+
+    /**
+     * Liefert das Rechnungs-PDF als ['filename' => string, 'content' => binary].
+     * preventSendBy=true verhindert, dass sevdesk den Belegstatus auf "versendet" setzt.
+     */
+    public function getInvoicePdf(int $invoiceId): array
+    {
+        $res = $this->request('GET', '/Invoice/' . $invoiceId . '/getPdf', [
+            'download' => 'false',
+            'preventSendBy' => 'true',
+        ]);
+
+        $obj = $res['objects'] ?? $res;
+        if (is_array($obj) && isset($obj[0])) {
+            $obj = $obj[0];
+        }
+        if (!is_array($obj) || empty($obj['content'])) {
+            throw new \RuntimeException('sevdesk PDF-Antwort ist leer (Invoice ' . $invoiceId . ')');
+        }
+
+        $content = base64_decode((string)$obj['content'], true);
+        if ($content === false || $content === '') {
+            throw new \RuntimeException('sevdesk PDF konnte nicht dekodiert werden (Invoice ' . $invoiceId . ')');
+        }
+
+        return [
+            'filename' => (string)($obj['filename'] ?? ('Rechnung_' . $invoiceId . '.pdf')),
+            'content' => $content,
+        ];
+    }
+
     public function updateContactBankData(int $contactId, string $iban, ?string $bic = null): array
     {
         // Kontakt Bankdaten aktualisieren (IBAN/BIC)

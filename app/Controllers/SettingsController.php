@@ -5,6 +5,7 @@ namespace App\Controllers;
 
 use App\Repositories\AuditLogRepository;
 use App\Repositories\SettingsRepository;
+use App\Services\CryptoService;
 use App\Support\Auth;
 use App\Support\Csrf;
 use App\Support\Flash;
@@ -27,6 +28,21 @@ final class SettingsController
     {
         Csrf::check();
 
+        $repo = new SettingsRepository();
+        $current = $repo->get();
+
+        // SMTP-Passwort: leer lassen = bestehendes Passwort behalten
+        $smtpPassEncrypted = $current['smtp_pass_encrypted'] ?? null;
+        $smtpPass = (string)($_POST['smtp_pass'] ?? '');
+        if ($smtpPass !== '') {
+            $smtpPassEncrypted = (new CryptoService())->encrypt($smtpPass);
+        }
+
+        $smtpEncryption = (string)($_POST['smtp_encryption'] ?? 'tls');
+        if (!in_array($smtpEncryption, ['none', 'tls', 'ssl'], true)) {
+            $smtpEncryption = 'tls';
+        }
+
         $data = [
             'creditor_name' => trim((string)($_POST['creditor_name'] ?? '')),
             'creditor_id' => trim((string)($_POST['creditor_id'] ?? '')),
@@ -42,6 +58,15 @@ final class SettingsController
             'batch_booking' => !empty($_POST['batch_booking']) ? 1 : 0,
             'sanitize_text' => !empty($_POST['sanitize_text']) ? 1 : 0,
             'include_bic' => !empty($_POST['include_bic']) ? 1 : 0,
+            'smtp_host' => trim((string)($_POST['smtp_host'] ?? '')) ?: null,
+            'smtp_port' => (int)($_POST['smtp_port'] ?? 587),
+            'smtp_encryption' => $smtpEncryption,
+            'smtp_user' => trim((string)($_POST['smtp_user'] ?? '')) ?: null,
+            'smtp_pass_encrypted' => $smtpPassEncrypted,
+            'smtp_from_email' => trim((string)($_POST['smtp_from_email'] ?? '')) ?: null,
+            'smtp_from_name' => trim((string)($_POST['smtp_from_name'] ?? '')) ?: null,
+            'smtp_test_mode' => !empty($_POST['smtp_test_mode']) ? 1 : 0,
+            'inkasso_email' => trim((string)($_POST['inkasso_email'] ?? '')) ?: null,
         ];
 
         if ($data['creditor_name'] === '' || $data['creditor_id'] === '' || $data['creditor_iban'] === '') {
@@ -50,7 +75,7 @@ final class SettingsController
             exit;
         }
 
-        (new SettingsRepository())->update($data);
+        $repo->update($data);
 
         $user = Auth::user();
         if ($user) {

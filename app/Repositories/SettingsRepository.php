@@ -12,6 +12,15 @@ final class SettingsRepository
         'creditor_zip' => 'VARCHAR(20) NULL',
         'creditor_city' => 'VARCHAR(120) NULL',
         'creditor_country' => 'VARCHAR(2) NULL',
+        'smtp_host' => 'VARCHAR(190) NULL',
+        'smtp_port' => 'SMALLINT UNSIGNED NOT NULL DEFAULT 587',
+        'smtp_encryption' => "VARCHAR(10) NOT NULL DEFAULT 'tls'",
+        'smtp_user' => 'VARCHAR(190) NULL',
+        'smtp_pass_encrypted' => 'TEXT NULL',
+        'smtp_from_email' => 'VARCHAR(190) NULL',
+        'smtp_from_name' => 'VARCHAR(190) NULL',
+        'smtp_test_mode' => 'TINYINT(1) NOT NULL DEFAULT 0',
+        'inkasso_email' => 'VARCHAR(190) NULL',
     ];
 
     private function ensureColumns(): void
@@ -56,7 +65,16 @@ final class SettingsRepository
             default_days_until_collection = :default_days_until_collection,
             batch_booking = :batch_booking,
             sanitize_text = :sanitize_text,
-            include_bic = :include_bic
+            include_bic = :include_bic,
+            smtp_host = :smtp_host,
+            smtp_port = :smtp_port,
+            smtp_encryption = :smtp_encryption,
+            smtp_user = :smtp_user,
+            smtp_pass_encrypted = :smtp_pass_encrypted,
+            smtp_from_email = :smtp_from_email,
+            smtp_from_name = :smtp_from_name,
+            smtp_test_mode = :smtp_test_mode,
+            inkasso_email = :inkasso_email
             WHERE id = 1';
         $st = $pdo->prepare($sql);
         $st->execute($data);
