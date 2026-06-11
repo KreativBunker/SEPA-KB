@@ -176,6 +176,80 @@
       <div></div>
     </div>
 
+    <h2 style="margin-top:24px">Mahnwesen-Automatik</h2>
+    <p class="muted">Terminierter Mahnlauf: erzeugt nach Ablauf der Fristen automatisch Zahlungserinnerung, 1. und 2. Mahnung als Beleg in sevdesk und versendet sie per E-Mail an den Kunden. Ab der 2. Mahnung verbleibt die Rechnung zur manuellen Inkasso-Übergabe im Mahnwesen.</p>
+
+    <div class="row">
+      <div>
+        <label>Mahnautomatik aktiv (Cron-Lauf erlaubt)</label>
+        <input type="checkbox" name="dunning_enabled" value="1" <?php echo !empty($settings['dunning_enabled']) ? 'checked' : ''; ?>>
+      </div>
+      <div>
+        <label>Modus</label>
+        <select name="dunning_mode">
+          <option value="review" <?php echo (($settings['dunning_mode'] ?? 'review') !== 'auto') ? 'selected' : ''; ?>>Mit Freigabe (Vorschläge manuell freigeben)</option>
+          <option value="auto" <?php echo (($settings['dunning_mode'] ?? '') === 'auto') ? 'selected' : ''; ?>>Vollautomatisch (Cron versendet direkt)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Tage nach Fälligkeit bis Zahlungserinnerung</label>
+        <input name="dunning_days_stage1" value="<?php echo htmlspecialchars((string)($settings['dunning_days_stage1'] ?? 7)); ?>">
+      </div>
+      <div>
+        <label>Tage nach Zahlungserinnerung bis 1. Mahnung</label>
+        <input name="dunning_days_stage2" value="<?php echo htmlspecialchars((string)($settings['dunning_days_stage2'] ?? 7)); ?>">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Tage nach 1. Mahnung bis 2. Mahnung</label>
+        <input name="dunning_days_stage3" value="<?php echo htmlspecialchars((string)($settings['dunning_days_stage3'] ?? 7)); ?>">
+      </div>
+      <div>
+        <label>Zahlungsziel der Mahnung (Tage)</label>
+        <input name="dunning_pay_days" value="<?php echo htmlspecialchars((string)($settings['dunning_pay_days'] ?? 7)); ?>">
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Rechnungen mit SEPA-Lastschrift / aktivem Mandat ausnehmen</label>
+        <input type="checkbox" name="dunning_skip_sepa" value="1" <?php echo (!isset($settings['dunning_skip_sepa']) || !empty($settings['dunning_skip_sepa'])) ? 'checked' : ''; ?>>
+      </div>
+      <div>
+        <label>Webcron-Token neu generieren (alte URL wird ungültig)</label>
+        <input type="checkbox" name="dunning_regenerate_cron_token" value="1">
+      </div>
+    </div>
+
+    <?php if (!empty($settings['dunning_cron_token'])): ?>
+      <label>Webcron-URL (täglich aufrufen lassen, z.B. per Hosting-Cronjob oder cron-job.org)</label>
+      <input readonly value="<?php echo htmlspecialchars(\App\Support\App::url('/cron/dunning/' . (string)$settings['dunning_cron_token'])); ?>" onclick="this.select();">
+      <p class="muted">Alternativ per CLI-Cronjob: <span class="mono">php bin/dunning_cron.php</span></p>
+    <?php else: ?>
+      <p class="muted">Die Webcron-URL wird beim ersten Speichern automatisch erzeugt.</p>
+    <?php endif; ?>
+
+    <p class="muted" style="margin-top:10px">E-Mail-Vorlagen je Stufe. Platzhalter: <span class="mono">{name}</span>, <span class="mono">{invoice_number}</span>, <span class="mono">{amount}</span>, <span class="mono">{due_date}</span>, <span class="mono">{pay_until}</span>, <span class="mono">{stage_label}</span>. Leer lassen = eingebaute deutsche Standardtexte. Die Signatur (siehe oben) wird automatisch angehängt.</p>
+
+    <label>Betreff Zahlungserinnerung</label>
+    <input name="dunning_subject_1" value="<?php echo htmlspecialchars($settings['dunning_subject_1'] ?? ''); ?>" placeholder="Zahlungserinnerung zur Rechnung {invoice_number}">
+    <label>Text Zahlungserinnerung</label>
+    <textarea name="dunning_body_1" rows="4" placeholder="Standardtext wird verwendet, wenn leer"><?php echo htmlspecialchars($settings['dunning_body_1'] ?? ''); ?></textarea>
+
+    <label>Betreff 1. Mahnung</label>
+    <input name="dunning_subject_2" value="<?php echo htmlspecialchars($settings['dunning_subject_2'] ?? ''); ?>" placeholder="1. Mahnung zur Rechnung {invoice_number}">
+    <label>Text 1. Mahnung</label>
+    <textarea name="dunning_body_2" rows="4" placeholder="Standardtext wird verwendet, wenn leer"><?php echo htmlspecialchars($settings['dunning_body_2'] ?? ''); ?></textarea>
+
+    <label>Betreff 2. Mahnung</label>
+    <input name="dunning_subject_3" value="<?php echo htmlspecialchars($settings['dunning_subject_3'] ?? ''); ?>" placeholder="2. Mahnung zur Rechnung {invoice_number}">
+    <label>Text 2. Mahnung</label>
+    <textarea name="dunning_body_3" rows="4" placeholder="Standardtext wird verwendet, wenn leer"><?php echo htmlspecialchars($settings['dunning_body_3'] ?? ''); ?></textarea>
+
     <div style="margin-top:14px">
       <button class="btn" type="submit">Speichern</button>
     </div>

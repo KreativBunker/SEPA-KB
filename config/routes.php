@@ -56,6 +56,16 @@ $router->get('/invoices', 'App\\Controllers\\InvoicesController@index', ['auth',
 $router->post('/invoices/load', 'App\\Controllers\\InvoicesController@load', ['auth','role:admin,staff']);
 $router->post('/invoices/select', 'App\\Controllers\\InvoicesController@select', ['auth','role:admin,staff']);
 
+$router->get('/dunning', 'App\\Controllers\\DunningController@index', ['auth','role:admin,staff']);
+$router->post('/dunning/scan', 'App\\Controllers\\DunningController@scan', ['auth','role:admin,staff']);
+$router->post('/dunning/approve', 'App\\Controllers\\DunningController@approve', ['auth','role:admin,staff']);
+$router->post('/dunning/{id}/skip', 'App\\Controllers\\DunningController@skip', ['auth','role:admin,staff']);
+$router->post('/dunning/{id}/retry', 'App\\Controllers\\DunningController@retry', ['auth','role:admin,staff']);
+$router->post('/dunning/exclude', 'App\\Controllers\\DunningController@exclude', ['auth','role:admin,staff']);
+$router->post('/dunning/exclusions/{id}/delete', 'App\\Controllers\\DunningController@unexclude', ['auth','role:admin,staff']);
+// Webcron-Endpoint: tokengeschützt, ohne Session-Auth (Muster /m/{token})
+$router->get('/cron/dunning/{token}', 'App\\Controllers\\DunningCronController@run');
+
 $router->get('/inkasso', 'App\\Controllers\\InkassoController@index', ['auth','role:admin,staff']);
 $router->post('/inkasso/load', 'App\\Controllers\\InkassoController@load', ['auth','role:admin,staff']);
 $router->post('/inkasso/{id}/handover', 'App\\Controllers\\InkassoController@handover', ['auth','role:admin,staff']);

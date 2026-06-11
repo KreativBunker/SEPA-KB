@@ -722,6 +722,7 @@ body.is-modern.is-dashboard .dash-warning.info  { border-color: #bfdbfe; }
           <a href="<?php echo App::url('/mandates'); ?>">Mandate</a>
           <a href="<?php echo App::url('/contracts'); ?>">Verträge</a>
           <a class="nav-secondary" href="<?php echo App::url('/invoices'); ?>">Rechnungen</a>
+          <a class="nav-secondary" href="<?php echo App::url('/dunning'); ?>">Mahnautomatik</a>
           <a class="nav-secondary" href="<?php echo App::url('/inkasso'); ?>">Mahnwesen</a>
           <a class="nav-secondary" href="<?php echo App::url('/exports'); ?>">Exporte</a>
         </span>

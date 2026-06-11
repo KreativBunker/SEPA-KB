@@ -7,6 +7,7 @@ use App\Repositories\AuditLogRepository;
 use App\Repositories\InkassoHandoverRepository;
 use App\Repositories\SettingsRepository;
 use App\Repositories\SevdeskAccountRepository;
+use App\Services\DunningService;
 use App\Services\InkassoService;
 use App\Services\MailerFactory;
 use App\Services\SevdeskClient;
@@ -74,147 +75,14 @@ final class InkassoController
         $client = new SevdeskClient(new SevdeskAccountRepository());
 
         try {
-            // 1. Offene Rechnungen paginiert laden (wie InvoicesController)
-            $all = [];
-            $limit = 200;
-            $offset = 0;
-            for ($page = 0; $page < 20; $page++) { // max 4000
-                $res = $client->getInvoices($limit, $offset, 'contact');
-                $objs = $res['objects'] ?? [];
-                if (!is_array($objs) || empty($objs)) {
-                    break;
-                }
-                foreach ($objs as $inv) {
-                    if (is_array($inv)) {
-                        $all[] = $inv;
-                    }
-                }
-                if (count($objs) < $limit) {
-                    break;
-                }
-                $offset += $limit;
-            }
-
-            // 2. Alle Mahnungen (invoiceType=MA) in einer zweiten paginierten Abfrage
-            //    laden und nach Ursprungsrechnung gruppieren – vermeidet N+1 API-Calls.
-            $dunningsByOrigin = [];
-            $offset = 0;
-            for ($page = 0; $page < 20; $page++) {
-                $res = $client->getDunningInvoices($limit, $offset);
-                $objs = $res['objects'] ?? [];
-                if (!is_array($objs) || empty($objs)) {
-                    break;
-                }
-                foreach ($objs as $ma) {
-                    if (!is_array($ma) || ($ma['invoiceType'] ?? 'MA') !== 'MA') {
-                        continue;
-                    }
-                    $originId = 0;
-                    $origin = $ma['origin'] ?? null;
-                    if (is_array($origin) && !empty($origin['id'])) {
-                        $originId = (int)$origin['id'];
-                    }
-                    if ($originId > 0) {
-                        $dunningsByOrigin[$originId][] = $ma;
-                    }
-                }
-                if (count($objs) < $limit) {
-                    break;
-                }
-                $offset += $limit;
-            }
+            // Kandidaten-Ermittlung teilt sich die Logik mit der Mahnautomatik
+            $rows = (new DunningService($client))->loadOverdueInvoices();
         } catch (\Throwable $e) {
             Logger::error('Inkasso: sevdesk laden fehlgeschlagen', $e);
             Flash::add('error', 'sevdesk laden fehlgeschlagen: ' . $e->getMessage());
             header('Location: ' . App::url('/inkasso'));
             exit;
         }
-
-        // 3. Filtern: offene, unbezahlte, überfällige Rechnungen (keine Mahnbelege selbst)
-        $today = date('Y-m-d');
-        $rows = [];
-        foreach ($all as $inv) {
-            if (($inv['invoiceType'] ?? 'RE') === 'MA') {
-                continue;
-            }
-            if ((int)($inv['status'] ?? 0) !== 200) {
-                continue;
-            }
-            if (!empty($inv['payDate'])) {
-                continue;
-            }
-
-            $id = (int)($inv['id'] ?? 0);
-            if ($id <= 0) {
-                continue;
-            }
-
-            $dueDate = substr(InkassoService::dueDateOf($inv), 0, 10);
-            $dunnings = $dunningsByOrigin[$id] ?? [];
-
-            $overdue = $dueDate !== '' && $dueDate < $today;
-            if (!$overdue && empty($dunnings)) {
-                continue;
-            }
-
-            usort($dunnings, static function (array $a, array $b): int {
-                return strcmp((string)($a['invoiceDate'] ?? ''), (string)($b['invoiceDate'] ?? ''));
-            });
-
-            $sumGross = InkassoService::invoiceAmount($inv);
-            $totalClaim = $sumGross;
-            $lastDunningDate = '';
-            if (!empty($dunnings)) {
-                $last = $dunnings[count($dunnings) - 1];
-                $totalClaim = max($totalClaim, InkassoService::invoiceAmount($last));
-                $lastDunningDate = substr((string)($last['invoiceDate'] ?? ''), 0, 10);
-            }
-
-            $daysOverdue = 0;
-            if ($overdue) {
-                $ts = strtotime($dueDate);
-                if ($ts !== false) {
-                    $daysOverdue = max(0, (int)floor((time() - $ts) / 86400));
-                }
-            }
-
-            $contactId = null;
-            $contactName = '';
-            $contact = $inv['contact'] ?? null;
-            if (is_array($contact)) {
-                $contactId = !empty($contact['id']) ? (int)$contact['id'] : null;
-                $contactName = $this->extractContactName($contact);
-            }
-            if ($contactName === '' || $contactName === 'Unbekannt') {
-                $fallback = trim((string)($inv['customerName'] ?? ($inv['contactName'] ?? '')));
-                if ($fallback !== '') {
-                    $contactName = $fallback;
-                }
-            }
-
-            $rows[] = [
-                'id' => $id,
-                'invoiceNumber' => (string)($inv['invoiceNumber'] ?? ''),
-                'contact_id' => $contactId,
-                'contact_name' => $contactName !== '' ? $contactName : 'Unbekannt',
-                'dueDate' => $dueDate,
-                'days_overdue' => $daysOverdue,
-                'sumGross' => $sumGross,
-                'total_claim' => $totalClaim,
-                'currency' => (string)($inv['currency'] ?? 'EUR'),
-                'dunning_level' => count($dunnings),
-                'last_dunning_date' => $lastDunningDate,
-            ];
-        }
-
-        // Sort: höchste Mahnstufe zuerst, dann am längsten überfällig
-        usort($rows, static function (array $a, array $b): int {
-            $cmp = (int)($b['dunning_level'] ?? 0) <=> (int)($a['dunning_level'] ?? 0);
-            if ($cmp !== 0) {
-                return $cmp;
-            }
-            return (int)($b['days_overdue'] ?? 0) <=> (int)($a['days_overdue'] ?? 0);
-        });
 
         $_SESSION['inkasso_cache'] = $rows;
 
@@ -337,41 +205,4 @@ final class InkassoController
         exit;
     }
 
-    private function extractContactName(array $contact): string
-    {
-        $given = '';
-        foreach (['surename', 'givenname', 'givenName', 'firstName', 'firstname'] as $k) {
-            if (!empty($contact[$k])) {
-                $given = trim((string)$contact[$k]);
-                break;
-            }
-        }
-
-        $family = '';
-        foreach (['familyname', 'familyName', 'lastName', 'lastname', 'surname'] as $k) {
-            if (!empty($contact[$k])) {
-                $family = trim((string)$contact[$k]);
-                break;
-            }
-        }
-
-        if ($given !== '' || $family !== '') {
-            $full = trim($given . ' ' . $family);
-            return $full !== '' ? $full : 'Unbekannt';
-        }
-
-        $name = trim((string)($contact['name'] ?? ''));
-        $name2 = trim((string)($contact['name2'] ?? ($contact['name_2'] ?? '')));
-        if ($name !== '' && $name2 !== '') {
-            return trim($name . ' ' . $name2);
-        }
-        if ($name !== '') {
-            return $name;
-        }
-        if ($name2 !== '') {
-            return $name2;
-        }
-
-        return 'Unbekannt';
-    }
 }

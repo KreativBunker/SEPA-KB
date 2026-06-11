@@ -317,6 +317,49 @@ public function getPaymentMethod(int $id, ?string $embed = null): array
         throw new \RuntimeException('sevdesk PDF-Antwort hat ein unbekanntes Format (Invoice ' . $invoiceId . ', HTTP ' . $res['code'] . ')');
     }
 
+    /**
+     * Erzeugt in sevdesk eine Mahnung zur Rechnung. sevdesk vergibt die
+     * Mahnstufe automatisch (1. Aufruf = Zahlungserinnerung, danach 1./2. Mahnung).
+     * Liefert das neue Mahn-Belegobjekt (Invoice mit invoiceType=MA, Entwurfsstatus).
+     */
+    public function createInvoiceReminder(int $invoiceId): array
+    {
+        return $this->request('POST', '/Invoice/Factory/createInvoiceReminder', [
+            'invoice[id]' => $invoiceId,
+            'invoice[objectName]' => 'Invoice',
+        ]);
+    }
+
+    public function updateInvoice(int $invoiceId, array $fields): array
+    {
+        return $this->request('PUT', '/Invoice/' . $invoiceId, [], $fields);
+    }
+
+    /**
+     * Markiert einen Beleg als versendet (Status 200).
+     * sendType: VM = per E-Mail, VPDF = als PDF, VPR = gedruckt, VP = per Post.
+     */
+    public function invoiceSendBy(int $invoiceId, string $sendType = 'VM'): array
+    {
+        return $this->request('PUT', '/Invoice/' . $invoiceId . '/sendBy', [], [
+            'sendType' => $sendType,
+            'sendDraft' => 'false',
+        ]);
+    }
+
+    public function getCommunicationWays(int $contactId, string $type = 'EMAIL', bool $mainOnly = false): array
+    {
+        $q = [
+            'contact[id]' => $contactId,
+            'contact[objectName]' => 'Contact',
+            'type' => $type,
+        ];
+        if ($mainOnly) {
+            $q['main'] = 1;
+        }
+        return $this->request('GET', '/CommunicationWay', $q);
+    }
+
     public function updateContactBankData(int $contactId, string $iban, ?string $bic = null): array
     {
         // Kontakt Bankdaten aktualisieren (IBAN/BIC)

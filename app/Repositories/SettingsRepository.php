@@ -26,6 +26,20 @@ final class SettingsRepository
         'm365_client_id' => 'VARCHAR(190) NULL',
         'm365_client_secret_encrypted' => 'TEXT NULL',
         'inkasso_signature' => 'TEXT NULL',
+        'dunning_enabled' => 'TINYINT(1) NOT NULL DEFAULT 0',
+        'dunning_mode' => "VARCHAR(10) NOT NULL DEFAULT 'review'",
+        'dunning_days_stage1' => 'SMALLINT UNSIGNED NOT NULL DEFAULT 7',
+        'dunning_days_stage2' => 'SMALLINT UNSIGNED NOT NULL DEFAULT 7',
+        'dunning_days_stage3' => 'SMALLINT UNSIGNED NOT NULL DEFAULT 7',
+        'dunning_pay_days' => 'SMALLINT UNSIGNED NOT NULL DEFAULT 7',
+        'dunning_skip_sepa' => 'TINYINT(1) NOT NULL DEFAULT 1',
+        'dunning_cron_token' => 'VARCHAR(64) NULL',
+        'dunning_subject_1' => 'VARCHAR(190) NULL',
+        'dunning_subject_2' => 'VARCHAR(190) NULL',
+        'dunning_subject_3' => 'VARCHAR(190) NULL',
+        'dunning_body_1' => 'TEXT NULL',
+        'dunning_body_2' => 'TEXT NULL',
+        'dunning_body_3' => 'TEXT NULL',
     ];
 
     private function ensureColumns(): void
@@ -84,7 +98,21 @@ final class SettingsRepository
             m365_tenant_id = :m365_tenant_id,
             m365_client_id = :m365_client_id,
             m365_client_secret_encrypted = :m365_client_secret_encrypted,
-            inkasso_signature = :inkasso_signature
+            inkasso_signature = :inkasso_signature,
+            dunning_enabled = :dunning_enabled,
+            dunning_mode = :dunning_mode,
+            dunning_days_stage1 = :dunning_days_stage1,
+            dunning_days_stage2 = :dunning_days_stage2,
+            dunning_days_stage3 = :dunning_days_stage3,
+            dunning_pay_days = :dunning_pay_days,
+            dunning_skip_sepa = :dunning_skip_sepa,
+            dunning_cron_token = :dunning_cron_token,
+            dunning_subject_1 = :dunning_subject_1,
+            dunning_subject_2 = :dunning_subject_2,
+            dunning_subject_3 = :dunning_subject_3,
+            dunning_body_1 = :dunning_body_1,
+            dunning_body_2 = :dunning_body_2,
+            dunning_body_3 = :dunning_body_3
             WHERE id = 1';
         $st = $pdo->prepare($sql);
         $st->execute($data);

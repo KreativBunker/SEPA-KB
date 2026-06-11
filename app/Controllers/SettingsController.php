@@ -52,6 +52,16 @@ final class SettingsController
 
         $mailProvider = (($_POST['mail_provider'] ?? 'smtp') === 'm365') ? 'm365' : 'smtp';
 
+        // Webcron-Token: beim ersten Speichern erzeugen, auf Wunsch neu generieren
+        $cronToken = trim((string)($current['dunning_cron_token'] ?? ''));
+        if ($cronToken === '' || !empty($_POST['dunning_regenerate_cron_token'])) {
+            $cronToken = bin2hex(random_bytes(24));
+        }
+
+        $dunningDays = static function (string $field) {
+            return max(0, min(365, (int)($_POST[$field] ?? 7)));
+        };
+
         $data = [
             'creditor_name' => trim((string)($_POST['creditor_name'] ?? '')),
             'creditor_id' => trim((string)($_POST['creditor_id'] ?? '')),
@@ -81,6 +91,20 @@ final class SettingsController
             'm365_client_id' => trim((string)($_POST['m365_client_id'] ?? '')) ?: null,
             'm365_client_secret_encrypted' => $m365SecretEncrypted,
             'inkasso_signature' => trim(str_replace(["\r\n", "\r"], "\n", (string)($_POST['inkasso_signature'] ?? ''))) ?: null,
+            'dunning_enabled' => !empty($_POST['dunning_enabled']) ? 1 : 0,
+            'dunning_mode' => (($_POST['dunning_mode'] ?? 'review') === 'auto') ? 'auto' : 'review',
+            'dunning_days_stage1' => $dunningDays('dunning_days_stage1'),
+            'dunning_days_stage2' => $dunningDays('dunning_days_stage2'),
+            'dunning_days_stage3' => $dunningDays('dunning_days_stage3'),
+            'dunning_pay_days' => $dunningDays('dunning_pay_days'),
+            'dunning_skip_sepa' => !empty($_POST['dunning_skip_sepa']) ? 1 : 0,
+            'dunning_cron_token' => $cronToken,
+            'dunning_subject_1' => trim((string)($_POST['dunning_subject_1'] ?? '')) ?: null,
+            'dunning_subject_2' => trim((string)($_POST['dunning_subject_2'] ?? '')) ?: null,
+            'dunning_subject_3' => trim((string)($_POST['dunning_subject_3'] ?? '')) ?: null,
+            'dunning_body_1' => trim(str_replace(["\r\n", "\r"], "\n", (string)($_POST['dunning_body_1'] ?? ''))) ?: null,
+            'dunning_body_2' => trim(str_replace(["\r\n", "\r"], "\n", (string)($_POST['dunning_body_2'] ?? ''))) ?: null,
+            'dunning_body_3' => trim(str_replace(["\r\n", "\r"], "\n", (string)($_POST['dunning_body_3'] ?? ''))) ?: null,
         ];
 
         if ($data['creditor_name'] === '' || $data['creditor_id'] === '' || $data['creditor_iban'] === '') {
