@@ -43,6 +43,15 @@ final class SettingsController
             $smtpEncryption = 'tls';
         }
 
+        // M365 Client Secret: leer lassen = bestehendes Secret behalten
+        $m365SecretEncrypted = $current['m365_client_secret_encrypted'] ?? null;
+        $m365Secret = (string)($_POST['m365_client_secret'] ?? '');
+        if ($m365Secret !== '') {
+            $m365SecretEncrypted = (new CryptoService())->encrypt($m365Secret);
+        }
+
+        $mailProvider = (($_POST['mail_provider'] ?? 'smtp') === 'm365') ? 'm365' : 'smtp';
+
         $data = [
             'creditor_name' => trim((string)($_POST['creditor_name'] ?? '')),
             'creditor_id' => trim((string)($_POST['creditor_id'] ?? '')),
@@ -67,6 +76,10 @@ final class SettingsController
             'smtp_from_name' => trim((string)($_POST['smtp_from_name'] ?? '')) ?: null,
             'smtp_test_mode' => !empty($_POST['smtp_test_mode']) ? 1 : 0,
             'inkasso_email' => trim((string)($_POST['inkasso_email'] ?? '')) ?: null,
+            'mail_provider' => $mailProvider,
+            'm365_tenant_id' => trim((string)($_POST['m365_tenant_id'] ?? '')) ?: null,
+            'm365_client_id' => trim((string)($_POST['m365_client_id'] ?? '')) ?: null,
+            'm365_client_secret_encrypted' => $m365SecretEncrypted,
         ];
 
         if ($data['creditor_name'] === '' || $data['creditor_id'] === '' || $data['creditor_iban'] === '') {

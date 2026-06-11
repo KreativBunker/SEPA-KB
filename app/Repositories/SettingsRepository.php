@@ -21,6 +21,10 @@ final class SettingsRepository
         'smtp_from_name' => 'VARCHAR(190) NULL',
         'smtp_test_mode' => 'TINYINT(1) NOT NULL DEFAULT 0',
         'inkasso_email' => 'VARCHAR(190) NULL',
+        'mail_provider' => "VARCHAR(10) NOT NULL DEFAULT 'smtp'",
+        'm365_tenant_id' => 'VARCHAR(190) NULL',
+        'm365_client_id' => 'VARCHAR(190) NULL',
+        'm365_client_secret_encrypted' => 'TEXT NULL',
     ];
 
     private function ensureColumns(): void
@@ -74,7 +78,11 @@ final class SettingsRepository
             smtp_from_email = :smtp_from_email,
             smtp_from_name = :smtp_from_name,
             smtp_test_mode = :smtp_test_mode,
-            inkasso_email = :inkasso_email
+            inkasso_email = :inkasso_email,
+            mail_provider = :mail_provider,
+            m365_tenant_id = :m365_tenant_id,
+            m365_client_id = :m365_client_id,
+            m365_client_secret_encrypted = :m365_client_secret_encrypted
             WHERE id = 1';
         $st = $pdo->prepare($sql);
         $st->execute($data);

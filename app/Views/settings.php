@@ -80,8 +80,56 @@
     </div>
 
     <h2 style="margin-top:24px">E-Mail / Inkasso</h2>
-    <p class="muted">SMTP-Zugangsdaten für den Versand von Inkasso-Übergaben sowie die E-Mail-Adresse des Inkassobüros.</p>
+    <p class="muted">Versandweg für Inkasso-Übergaben sowie die E-Mail-Adresse des Inkassobüros.</p>
 
+    <?php $mailProvider = ($settings['mail_provider'] ?? 'smtp') === 'm365' ? 'm365' : 'smtp'; ?>
+    <div class="row">
+      <div>
+        <label>Versand über</label>
+        <select name="mail_provider" id="mail_provider" onchange="document.getElementById('mail-smtp').style.display = this.value === 'smtp' ? '' : 'none'; document.getElementById('mail-m365').style.display = this.value === 'm365' ? '' : 'none';">
+          <option value="smtp" <?php echo $mailProvider === 'smtp' ? 'selected' : ''; ?>>Eigener SMTP-Server</option>
+          <option value="m365" <?php echo $mailProvider === 'm365' ? 'selected' : ''; ?>>Microsoft 365 (Graph API)</option>
+        </select>
+      </div>
+      <div>
+        <label>Inkassobüro E-Mail</label>
+        <input name="inkasso_email" value="<?php echo htmlspecialchars($settings['inkasso_email'] ?? ''); ?>" placeholder="forderungen@inkasso-beispiel.de">
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label>Absender-Adresse</label>
+        <input name="smtp_from_email" value="<?php echo htmlspecialchars($settings['smtp_from_email'] ?? ''); ?>" placeholder="buchhaltung@example.de">
+      </div>
+      <div>
+        <label>Absender-Name</label>
+        <input name="smtp_from_name" value="<?php echo htmlspecialchars($settings['smtp_from_name'] ?? ''); ?>">
+      </div>
+    </div>
+
+    <div id="mail-m365" style="<?php echo $mailProvider === 'm365' ? '' : 'display:none'; ?>">
+      <p class="muted">Benötigt eine App-Registrierung in Microsoft Entra ID mit der Application-Berechtigung <strong>Mail.Send</strong> (mit Admin-Zustimmung). Der Versand erfolgt als das oben angegebene Absender-Postfach.</p>
+      <div class="row">
+        <div>
+          <label>Tenant-ID (Verzeichnis-ID)</label>
+          <input name="m365_tenant_id" value="<?php echo htmlspecialchars($settings['m365_tenant_id'] ?? ''); ?>" placeholder="00000000-0000-0000-0000-000000000000">
+        </div>
+        <div>
+          <label>Client-ID (Anwendungs-ID)</label>
+          <input name="m365_client_id" value="<?php echo htmlspecialchars($settings['m365_client_id'] ?? ''); ?>" placeholder="00000000-0000-0000-0000-000000000000">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Client Secret</label>
+          <input type="password" name="m365_client_secret" value="" autocomplete="new-password" placeholder="<?php echo !empty($settings['m365_client_secret_encrypted']) ? 'gespeichert – leer lassen zum Beibehalten' : ''; ?>">
+        </div>
+        <div></div>
+      </div>
+    </div>
+
+    <div id="mail-smtp" style="<?php echo $mailProvider === 'smtp' ? '' : 'display:none'; ?>">
     <div class="row">
       <div>
         <label>SMTP-Host</label>
@@ -113,21 +161,8 @@
         <label>SMTP-Passwort</label>
         <input type="password" name="smtp_pass" value="" autocomplete="new-password" placeholder="<?php echo !empty($settings['smtp_pass_encrypted']) ? 'gespeichert – leer lassen zum Beibehalten' : ''; ?>">
       </div>
-      <div>
-        <label>Absender-Adresse</label>
-        <input name="smtp_from_email" value="<?php echo htmlspecialchars($settings['smtp_from_email'] ?? ''); ?>" placeholder="buchhaltung@example.de">
-      </div>
+      <div></div>
     </div>
-
-    <div class="row">
-      <div>
-        <label>Absender-Name</label>
-        <input name="smtp_from_name" value="<?php echo htmlspecialchars($settings['smtp_from_name'] ?? ''); ?>">
-      </div>
-      <div>
-        <label>Inkassobüro E-Mail</label>
-        <input name="inkasso_email" value="<?php echo htmlspecialchars($settings['inkasso_email'] ?? ''); ?>" placeholder="forderungen@inkasso-beispiel.de">
-      </div>
     </div>
 
     <div class="row">
