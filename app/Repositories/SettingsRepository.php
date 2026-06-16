@@ -40,6 +40,9 @@ final class SettingsRepository
         'dunning_body_1' => 'TEXT NULL',
         'dunning_body_2' => 'TEXT NULL',
         'dunning_body_3' => 'TEXT NULL',
+        'installment_seq_mode' => "VARCHAR(20) NOT NULL DEFAULT 'rcur_only'",
+        'installment_default_rates' => 'SMALLINT UNSIGNED NOT NULL DEFAULT 3',
+        'installment_remittance_template' => "VARCHAR(140) NOT NULL DEFAULT 'Rechnung {invoice_number} Rate {rate_no}/{rate_count}'",
     ];
 
     private function ensureColumns(): void
@@ -112,7 +115,10 @@ final class SettingsRepository
             dunning_subject_3 = :dunning_subject_3,
             dunning_body_1 = :dunning_body_1,
             dunning_body_2 = :dunning_body_2,
-            dunning_body_3 = :dunning_body_3
+            dunning_body_3 = :dunning_body_3,
+            installment_seq_mode = :installment_seq_mode,
+            installment_default_rates = :installment_default_rates,
+            installment_remittance_template = :installment_remittance_template
             WHERE id = 1';
         $st = $pdo->prepare($sql);
         $st->execute($data);

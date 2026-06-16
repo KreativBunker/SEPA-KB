@@ -71,6 +71,15 @@ $router->post('/inkasso/load', 'App\\Controllers\\InkassoController@load', ['aut
 $router->post('/inkasso/{id}/handover', 'App\\Controllers\\InkassoController@handover', ['auth','role:admin,staff']);
 $router->post('/settings/smtp-test', 'App\\Controllers\\InkassoController@smtpTest', ['auth','role:admin,staff']);
 
+$router->get('/installments', 'App\\Controllers\\InstallmentsController@index', ['auth','role:admin,staff']);
+$router->get('/installments/create', 'App\\Controllers\\InstallmentsController@create', ['auth','role:admin,staff']);
+$router->post('/installments', 'App\\Controllers\\InstallmentsController@store', ['auth','role:admin,staff']);
+$router->post('/installments/queue-due', 'App\\Controllers\\InstallmentsController@queueDue', ['auth','role:admin,staff']);
+$router->get('/installments/{id}', 'App\\Controllers\\InstallmentsController@show', ['auth','role:admin,staff']);
+$router->post('/installments/{id}/cancel', 'App\\Controllers\\InstallmentsController@cancel', ['auth','role:admin,staff']);
+$router->post('/installments/{id}/rate/{rid}/fail', 'App\\Controllers\\InstallmentsController@markRateFailed', ['auth','role:admin,staff']);
+$router->post('/installments/{id}/rate/{rid}/reset', 'App\\Controllers\\InstallmentsController@resetRate', ['auth','role:admin,staff']);
+
 $router->get('/exports', 'App\\Controllers\\ExportsController@index', ['auth','role:admin,staff']);
 $router->get('/exports/create', 'App\\Controllers\\ExportsController@create', ['auth','role:admin,staff']);
 $router->post('/exports', 'App\\Controllers\\ExportsController@store', ['auth','role:admin,staff']);

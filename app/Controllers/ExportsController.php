@@ -86,6 +86,7 @@ final class ExportsController
         $settings = (new SettingsRepository())->get();
         $mandateRepo = new MandateRepository();
         $markerRepo = new InvoiceMarkerRepository();
+        $installmentPlanRepo = new \App\Repositories\InstallmentPlanRepository();
         $val = new ValidationService();
 
         $client = new SevdeskClient(new SevdeskAccountRepository());
@@ -147,6 +148,9 @@ final class ExportsController
             } else if ($markerRepo->exists($invoiceId)) {
                 $status = 'error';
                 $error = 'Rechnung wurde bereits exportiert';
+            } else if ($installmentPlanRepo->hasActivePlan($invoiceId)) {
+                $status = 'error';
+                $error = 'Für diese Rechnung existiert ein Ratenplan';
             } else if ($amount <= 0.0) {
                 $status = 'error';
                 $error = 'Betrag ist 0';
@@ -350,15 +354,30 @@ if (@file_put_contents($abs, $xml) === false) {
         Csrf::check();
         $id = (int)($params['id'] ?? 0);
 
+        $run = (new ExportRunRepository())->find($id);
+        $isInstallment = is_array($run) && (($run['run_type'] ?? 'invoices') === 'installments');
+
         $itemRepo = new ExportItemRepository();
         $itemRepo->refreshMandateDataForRun($id);
         $items = $itemRepo->forRun($id);
         $markerRepo = new InvoiceMarkerRepository();
         $mandateRepo = new MandateRepository();
+        $rateRepo = new \App\Repositories\InstallmentRateRepository();
+        $planRepo = new \App\Repositories\InstallmentPlanRepository();
+        $completedPlans = [];
 
         foreach ($items as $it) {
             if ($it['status'] === 'ok') {
-                $markerRepo->mark((int)$it['sevdesk_invoice_id'], $id);
+                if ($isInstallment) {
+                    // Raten-Läufe schreiben keinen Einmal-Marker, sondern markieren die Rate als eingezogen
+                    $rateRepo->markCollectedByExportItem((int)$it['id'], $id);
+                    $planId = $rateRepo->planIdByExportItem((int)$it['id']);
+                    if ($planId) {
+                        $completedPlans[$planId] = true;
+                    }
+                } else {
+                    $markerRepo->mark((int)$it['sevdesk_invoice_id'], $id);
+                }
 
                 // mark mandate usage for sequence tracking
                 $m = $mandateRepo->findByContactId((int)$it['sevdesk_contact_id']);
@@ -366,6 +385,10 @@ if (@file_put_contents($abs, $xml) === false) {
                     $mandateRepo->markUsed((int)$m['id'], (string)$it['sequence_type']);
                 }
             }
+        }
+
+        foreach (array_keys($completedPlans) as $planId) {
+            $planRepo->markCompletedIfAllRatesCollected((int)$planId);
         }
 
         (new ExportItemRepository())->markCompletedForRun($id);

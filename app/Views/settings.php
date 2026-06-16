@@ -283,6 +283,28 @@ $wysField = static function (string $name, string $value, string $placeholder = 
     <label>Text 2. Mahnung</label>
     <?php $wysField('dunning_body_3', (string)($settings['dunning_body_3'] ?? ''), 'Standardtext wird verwendet, wenn leer'); ?>
 
+    <h2 style="margin-top:22px">Ratenzahlung</h2>
+    <p class="muted">Vorgaben für neue Ratenpläne (SEPA-Lastschrift).</p>
+
+    <div class="row3">
+      <div>
+        <label>Sequenztyp-Modus</label>
+        <select name="installment_seq_mode">
+          <option value="rcur_only" <?php echo (($settings['installment_seq_mode'] ?? 'rcur_only') !== 'frst_rcur_fnal') ? 'selected' : ''; ?>>Immer RCUR (empfohlen)</option>
+          <option value="frst_rcur_fnal" <?php echo (($settings['installment_seq_mode'] ?? '') === 'frst_rcur_fnal') ? 'selected' : ''; ?>>FRST / RCUR / FNAL</option>
+        </select>
+      </div>
+      <div>
+        <label>Standard-Anzahl Raten</label>
+        <input name="installment_default_rates" value="<?php echo htmlspecialchars((string)($settings['installment_default_rates'] ?? 3)); ?>">
+      </div>
+      <div>
+        <label>Verwendungszweck Template</label>
+        <input name="installment_remittance_template" value="<?php echo htmlspecialchars((string)($settings['installment_remittance_template'] ?? 'Rechnung {invoice_number} Rate {rate_no}/{rate_count}')); ?>">
+      </div>
+    </div>
+    <p class="muted">Im Modus „FRST / RCUR / FNAL" wird pro Sequenztyp ein eigener Export-Lauf erzeugt. „Immer RCUR" fasst die Raten in einem Lauf zusammen.</p>
+
     <div style="margin-top:14px">
       <button class="btn" type="submit">Speichern</button>
     </div>

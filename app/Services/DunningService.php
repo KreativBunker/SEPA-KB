@@ -264,6 +264,11 @@ final class DunningService
             return 'Kontakt steht auf der Ausschlussliste';
         }
 
+        // Rechnungen mit aktivem Ratenzahlungsplan werden nicht regulär gemahnt
+        if ($invoiceId > 0 && (new \App\Repositories\InstallmentPlanRepository())->hasActivePlan($invoiceId)) {
+            return 'Aktiver Ratenzahlungsplan vorhanden';
+        }
+
         if (!empty($settings['dunning_skip_sepa'])) {
             $pmName = (string)($row['payment_method'] ?? '');
             $pmLower = function_exists('mb_strtolower') ? mb_strtolower($pmName) : strtolower($pmName);
