@@ -5,9 +5,13 @@
     <input type="hidden" name="_csrf" value="<?php echo htmlspecialchars($csrf); ?>">
 
     <label>Quelle</label>
-    <div class="row" style="margin-bottom:6px">
-      <label style="font-weight:400"><input type="radio" name="source" value="invoice" checked onclick="toggleSource()"> Aus sevdesk-Rechnung</label>
-      <label style="font-weight:400"><input type="radio" name="source" value="manual" onclick="toggleSource()"> Freier Betrag (über Mandat)</label>
+    <div style="display:flex; gap:28px; flex-wrap:wrap; margin-bottom:10px">
+      <label style="display:flex; align-items:center; gap:8px; font-weight:400; cursor:pointer">
+        <input type="radio" name="source" value="invoice" checked onclick="toggleSource()" style="width:auto; max-width:none; margin:0; flex:0 0 auto"> Aus sevdesk-Rechnung
+      </label>
+      <label style="display:flex; align-items:center; gap:8px; font-weight:400; cursor:pointer">
+        <input type="radio" name="source" value="manual" onclick="toggleSource()" style="width:auto; max-width:none; margin:0; flex:0 0 auto"> Freier Betrag (über Mandat)
+      </label>
     </div>
 
     <div id="src-invoice">
@@ -60,8 +64,9 @@
         <input type="number" name="rate_count" min="1" max="60" value="<?php echo (int)$defaultRates; ?>" required>
       </div>
       <div>
-        <label>Intervall (Monate)</label>
+        <label>Abstand zwischen Raten (Monate)</label>
         <input type="number" name="interval_months" min="1" max="12" value="1" required>
+        <p class="muted" style="margin-top:4px">1 = monatlich, 3 = vierteljährlich</p>
       </div>
       <div>
         <label>Erstes Einzugsdatum</label>
