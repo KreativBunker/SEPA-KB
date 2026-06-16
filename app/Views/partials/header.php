@@ -722,11 +722,17 @@ body.is-modern.is-dashboard .dash-warning.info  { border-color: #bfdbfe; }
         <span class="nav-group">
           <a href="<?php echo App::url('/mandates'); ?>">Mandate</a>
           <a href="<?php echo App::url('/contracts'); ?>">Verträge</a>
-          <a class="nav-secondary" href="<?php echo App::url('/invoices'); ?>">Rechnungen</a>
-          <a class="nav-secondary" href="<?php echo App::url('/dunning'); ?>">Mahnautomatik</a>
-          <a class="nav-secondary" href="<?php echo App::url('/inkasso'); ?>">Mahnwesen</a>
-          <a class="nav-secondary" href="<?php echo App::url('/installments'); ?>">Ratenzahlung</a>
-          <a class="nav-secondary" href="<?php echo App::url('/exports'); ?>">Exporte</a>
+        </span>
+        <span class="nav-sep"></span>
+        <span class="nav-dropdown">
+          <a class="nav-dropdown-toggle">Rechnungseinzug</a>
+          <div class="nav-dropdown-menu">
+            <a href="<?php echo App::url('/invoices'); ?>">Rechnungen</a>
+            <a href="<?php echo App::url('/installments'); ?>">Ratenzahlung</a>
+            <a href="<?php echo App::url('/exports'); ?>">Exporte</a>
+            <a href="<?php echo App::url('/dunning'); ?>">Mahnautomatik</a>
+            <a href="<?php echo App::url('/inkasso'); ?>">Mahnwesen</a>
+          </div>
         </span>
         <span class="nav-sep"></span>
         <span class="nav-dropdown">
