@@ -116,6 +116,9 @@ final class SettingsController
             'dunning_body_1' => $richField('dunning_body_1'),
             'dunning_body_2' => $richField('dunning_body_2'),
             'dunning_body_3' => $richField('dunning_body_3'),
+            'installment_seq_mode' => (($_POST['installment_seq_mode'] ?? 'rcur_only') === 'frst_rcur_fnal') ? 'frst_rcur_fnal' : 'rcur_only',
+            'installment_default_rates' => max(1, min(60, (int)($_POST['installment_default_rates'] ?? 3))),
+            'installment_remittance_template' => trim((string)($_POST['installment_remittance_template'] ?? '')) ?: 'Rechnung {invoice_number} Rate {rate_no}/{rate_count}',
         ];
 
         if ($data['creditor_name'] === '' || $data['creditor_id'] === '' || $data['creditor_iban'] === '') {

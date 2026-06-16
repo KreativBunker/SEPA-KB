@@ -30,6 +30,34 @@ final class ExportItemRepository
         }
     }
 
+    /** Fügt eine einzelne Position ein und liefert deren ID (für Raten-Verknüpfung). */
+    public function insertOne(int $runId, array $it): int
+    {
+        $pdo = Db::pdo();
+        $sql = 'INSERT INTO export_items
+            (export_run_id,sevdesk_invoice_id,invoice_number,sevdesk_contact_id,debtor_name,debtor_iban,mandate_reference,mandate_date,sequence_type,amount,endtoend_id,remittance,status,error_text)
+            VALUES
+            (:export_run_id,:sevdesk_invoice_id,:invoice_number,:sevdesk_contact_id,:debtor_name,:debtor_iban,:mandate_reference,:mandate_date,:sequence_type,:amount,:endtoend_id,:remittance,:status,:error_text)';
+        $st = $pdo->prepare($sql);
+        $st->execute([
+            'export_run_id' => $runId,
+            'sevdesk_invoice_id' => (int)($it['sevdesk_invoice_id'] ?? 0),
+            'invoice_number' => (string)($it['invoice_number'] ?? ''),
+            'sevdesk_contact_id' => (int)($it['sevdesk_contact_id'] ?? 0),
+            'debtor_name' => (string)($it['debtor_name'] ?? ''),
+            'debtor_iban' => (string)($it['debtor_iban'] ?? ''),
+            'mandate_reference' => (string)($it['mandate_reference'] ?? ''),
+            'mandate_date' => (string)($it['mandate_date'] ?? '1970-01-01'),
+            'sequence_type' => (string)($it['sequence_type'] ?? 'RCUR'),
+            'amount' => (float)($it['amount'] ?? 0),
+            'endtoend_id' => (string)($it['endtoend_id'] ?? ''),
+            'remittance' => (string)($it['remittance'] ?? ''),
+            'status' => (string)($it['status'] ?? 'pending'),
+            'error_text' => $it['error_text'] ?? null,
+        ]);
+        return (int)$pdo->lastInsertId();
+    }
+
     public function updateStatus(int $id, string $status, ?string $errorText = null): void
     {
         $pdo = Db::pdo();

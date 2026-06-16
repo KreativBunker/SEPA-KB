@@ -25,14 +25,47 @@ final class ExportRunRepository
 
     public function create(array $data): int
     {
+        $this->ensureColumns();
         $pdo = Db::pdo();
         $sql = 'INSERT INTO export_runs
-            (title,collection_date,pain_version,batch_booking,scheme_default,endtoend_strategy,remittance_template,status,total_count,total_sum,created_by_user_id)
+            (title,collection_date,pain_version,batch_booking,scheme_default,endtoend_strategy,remittance_template,status,run_type,sequence_type,total_count,total_sum,created_by_user_id)
             VALUES
-            (:title,:collection_date,:pain_version,:batch_booking,:scheme_default,:endtoend_strategy,:remittance_template,:status,0,0,:created_by_user_id)';
+            (:title,:collection_date,:pain_version,:batch_booking,:scheme_default,:endtoend_strategy,:remittance_template,:status,:run_type,:sequence_type,0,0,:created_by_user_id)';
         $st = $pdo->prepare($sql);
-        $st->execute($data);
+        $st->execute([
+            'title' => (string)($data['title'] ?? 'Lastschrift'),
+            'collection_date' => (string)($data['collection_date'] ?? date('Y-m-d')),
+            'pain_version' => (string)($data['pain_version'] ?? 'pain.008.001.08'),
+            'batch_booking' => (int)($data['batch_booking'] ?? 0),
+            'scheme_default' => (string)($data['scheme_default'] ?? 'CORE'),
+            'endtoend_strategy' => (string)($data['endtoend_strategy'] ?? 'invoice_number'),
+            'remittance_template' => (string)($data['remittance_template'] ?? 'Rechnung {invoice_number}'),
+            'status' => (string)($data['status'] ?? 'draft'),
+            'run_type' => (string)($data['run_type'] ?? 'invoices'),
+            'sequence_type' => $data['sequence_type'] ?? null,
+            'created_by_user_id' => (int)($data['created_by_user_id'] ?? 0),
+        ]);
         return (int)$pdo->lastInsertId();
+    }
+
+    private function ensureColumns(): void
+    {
+        $pdo = Db::pdo();
+        try {
+            $rows = $pdo->query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'export_runs'")->fetchAll();
+            if (!is_array($rows)) {
+                return;
+            }
+            $existing = array_map(static fn ($row) => (string)($row['COLUMN_NAME'] ?? ''), $rows);
+            if (!in_array('run_type', $existing, true)) {
+                $pdo->exec("ALTER TABLE export_runs ADD COLUMN run_type ENUM('invoices','installments') NOT NULL DEFAULT 'invoices'");
+            }
+            if (!in_array('sequence_type', $existing, true)) {
+                $pdo->exec("ALTER TABLE export_runs ADD COLUMN sequence_type ENUM('FRST','RCUR','OOFF','FNAL') NULL");
+            }
+        } catch (\Throwable $e) {
+            // ignore
+        }
     }
 
     public function updateTotals(int $id, int $count, float $sum, string $status, ?string $validatedAt = null): void
