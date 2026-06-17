@@ -58,6 +58,7 @@ $router->post('/invoices/select', 'App\\Controllers\\InvoicesController@select',
 
 $router->get('/dunning', 'App\\Controllers\\DunningController@index', ['auth','role:admin,staff']);
 $router->post('/dunning/scan', 'App\\Controllers\\DunningController@scan', ['auth','role:admin,staff']);
+$router->post('/dunning/diagnose', 'App\\Controllers\\DunningController@diagnose', ['auth','role:admin,staff']);
 $router->post('/dunning/approve', 'App\\Controllers\\DunningController@approve', ['auth','role:admin,staff']);
 $router->post('/dunning/{id}/skip', 'App\\Controllers\\DunningController@skip', ['auth','role:admin,staff']);
 $router->post('/dunning/{id}/retry', 'App\\Controllers\\DunningController@retry', ['auth','role:admin,staff']);

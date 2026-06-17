@@ -23,10 +23,43 @@ final class DunningController
 {
     public function index(): void
     {
+        $this->renderIndex();
+    }
+
+    /**
+     * Diagnose: prüft für eine Rechnungsnummer/-ID rein lesend, wie sie in
+     * sevdesk vorliegt und ob sie über eine Stornorechnung als erledigt
+     * erkannt wird. Hilft bei Rechnungen, die fälschlich weiter gemahnt werden.
+     */
+    public function diagnose(): void
+    {
+        Csrf::check();
+
+        $needle = trim((string)($_POST['invoice'] ?? ''));
+        $diagnose = null;
+        if ($needle === '') {
+            Flash::add('error', 'Bitte eine Rechnungsnummer oder sevdesk-ID eingeben.');
+        } else {
+            try {
+                $diagnose = $this->service()->diagnoseInvoice($needle);
+                if (!$diagnose['found']) {
+                    Flash::add('error', 'Rechnung „' . $needle . '" wurde in sevdesk nicht gefunden.');
+                }
+            } catch (\Throwable $e) {
+                Logger::error('Mahnwesen: Diagnose fehlgeschlagen', $e);
+                Flash::add('error', 'Diagnose fehlgeschlagen: ' . $e->getMessage());
+            }
+        }
+
+        $this->renderIndex(['diagnose' => $diagnose, 'diagnoseInput' => $needle]);
+    }
+
+    private function renderIndex(array $extra = []): void
+    {
         $settings = (new SettingsRepository())->get();
         $service = $this->service();
 
-        View::render('dunning/index', [
+        View::render('dunning/index', array_merge([
             'csrf' => Csrf::token(),
             'pending' => (new DunningActionRepository())->findPending(),
             'history' => (new DunningActionRepository())->recent(100),
@@ -41,7 +74,9 @@ final class DunningController
                 ? App::url('/cron/dunning/' . (string)$settings['dunning_cron_token'])
                 : '',
             'messages' => Flash::all(),
-        ]);
+            'diagnose' => null,
+            'diagnoseInput' => '',
+        ], $extra));
     }
 
     public function scan(): void

@@ -279,6 +279,139 @@ final class DunningService
     }
 
     /**
+     * Diagnostiziert für eine konkrete Rechnung (Nummer oder sevdesk-ID),
+     * wie sie in sevdesk vorliegt und ob sie über eine Stornorechnung als
+     * erledigt erkannt wird. Rein lesend – verändert nichts in sevdesk.
+     *
+     * @return array{
+     *   found: bool,
+     *   needle: string,
+     *   invoice: array<string,mixed>|null,
+     *   sr_total: int,
+     *   matched: array<int, array{id:int, invoiceNumber:string, invoiceDate:string}>,
+     *   recognized: bool,
+     *   sample_sr_fields: array<string, scalar|null>
+     * }
+     */
+    public function diagnoseInvoice(string $needle): array
+    {
+        $needle = trim($needle);
+        $result = [
+            'found' => false,
+            'needle' => $needle,
+            'invoice' => null,
+            'sr_total' => 0,
+            'matched' => [],
+            'recognized' => false,
+            'sample_sr_fields' => [],
+        ];
+        if ($needle === '') {
+            return $result;
+        }
+
+        // 1. Rechnung anhand Nummer oder ID finden
+        $target = null;
+        if (ctype_digit($needle)) {
+            $target = $this->unwrap($this->client->getInvoice((int)$needle, 'contact'));
+            if (!is_array($target) || (int)($target['id'] ?? 0) <= 0) {
+                $target = null;
+            }
+        }
+        if ($target === null) {
+            $limit = 200;
+            $offset = 0;
+            for ($page = 0; $page < 30; $page++) {
+                $res = $this->client->getInvoices($limit, $offset, 'contact');
+                $objs = $res['objects'] ?? [];
+                if (!is_array($objs) || empty($objs)) {
+                    break;
+                }
+                foreach ($objs as $inv) {
+                    if (is_array($inv) && (string)($inv['invoiceNumber'] ?? '') === $needle) {
+                        $target = $inv;
+                        break 2;
+                    }
+                }
+                if (count($objs) < $limit) {
+                    break;
+                }
+                $offset += $limit;
+            }
+        }
+
+        if (!is_array($target) || (int)($target['id'] ?? 0) <= 0) {
+            return $result;
+        }
+
+        $invoiceId = (int)$target['id'];
+        $result['found'] = true;
+        $result['invoice'] = [
+            'id' => $invoiceId,
+            'invoiceNumber' => (string)($target['invoiceNumber'] ?? ''),
+            'invoiceType' => (string)($target['invoiceType'] ?? ''),
+            'status' => (string)($target['status'] ?? ''),
+            'payDate' => $target['payDate'] ?? null,
+            'sumGross' => $target['sumGross'] ?? null,
+            'amount' => InkassoService::invoiceAmount($target),
+            'dueDate' => InkassoService::dueDateOf($target),
+        ];
+
+        // 2. Stornorechnungen laden und nach Verknüpfung zu dieser Rechnung suchen
+        $srTotal = 0;
+        $matched = [];
+        $sampleFields = [];
+        $limit = 200;
+        $offset = 0;
+        for ($page = 0; $page < 20; $page++) {
+            try {
+                $res = $this->client->getCancellationInvoices($limit, $offset);
+            } catch (\Throwable $e) {
+                Logger::error('Mahnwesen: Stornorechnungen konnten nicht geladen werden (Diagnose)', $e);
+                break;
+            }
+            $objs = $res['objects'] ?? [];
+            if (!is_array($objs) || empty($objs)) {
+                break;
+            }
+            foreach ($objs as $sr) {
+                if (!is_array($sr)) {
+                    continue;
+                }
+                $srTotal++;
+                if (empty($sampleFields)) {
+                    foreach ($sr as $k => $v) {
+                        $sampleFields[(string)$k] = is_scalar($v) || $v === null ? $v : ('(' . gettype($v) . ')');
+                    }
+                }
+                $origin = $sr['origin'] ?? null;
+                $originId = is_array($origin) ? (int)($origin['id'] ?? 0) : 0;
+                if ($originId === $invoiceId) {
+                    $matched[] = [
+                        'id' => (int)($sr['id'] ?? 0),
+                        'invoiceNumber' => (string)($sr['invoiceNumber'] ?? ''),
+                        'invoiceDate' => (string)($sr['invoiceDate'] ?? ''),
+                    ];
+                }
+            }
+            if (count($objs) < $limit) {
+                break;
+            }
+            $offset += $limit;
+        }
+
+        $result['sr_total'] = $srTotal;
+        $result['matched'] = $matched;
+        $result['recognized'] = !empty($matched);
+        // Feldnamen einer Beispiel-Stornorechnung nur zeigen, wenn keine
+        // Verknüpfung gefunden wurde – hilft, ein abweichendes Verweis-Feld zu finden.
+        if (empty($matched) && $srTotal > 0) {
+            $result['sample_sr_fields'] = $sampleFields;
+        }
+
+        return $result;
+    }
+
+    /**
      * Bestimmt die nächste fällige Mahnstufe einer Rechnung oder null,
      * wenn (noch) keine Stufe fällig ist bzw. die Eskalation abgeschlossen
      * ist (Stufe 3 erreicht -> manuelle Inkasso-Übergabe).
