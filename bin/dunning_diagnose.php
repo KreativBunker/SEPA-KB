@@ -4,7 +4,8 @@ declare(strict_types=1);
 /**
  * Diagnose-Hilfe für die Mahnautomatik: prüft für eine konkrete Rechnung,
  * wie sie in sevdesk vorliegt und ob sie über eine Stornorechnung (SR)
- * als erledigt erkannt wird.
+ * als erledigt erkannt wird. Dieselbe Prüfung steht auch in der Weboberfläche
+ * unter „Mahnautomatik“ → „Storno-Prüfung einer Rechnung“ zur Verfügung.
  *
  * Aufruf (rein lesend, nur GET-Requests an sevdesk):
  *   php bin/dunning_diagnose.php RE-2026/252406
@@ -22,7 +23,6 @@ require $basePath . '/vendor/autoload.php';
 
 use App\Repositories\SevdeskAccountRepository;
 use App\Services\DunningService;
-use App\Services\InkassoService;
 use App\Services\SevdeskClient;
 use App\Support\App;
 
@@ -39,115 +39,44 @@ if ($needle === '') {
     exit(1);
 }
 
-$client = new SevdeskClient(new SevdeskAccountRepository());
+$service = new DunningService(new SevdeskClient(new SevdeskAccountRepository()));
+$d = $service->diagnoseInvoice($needle);
 
-// 1. Rechnung anhand Nummer oder ID finden
-$target = null;
-if (ctype_digit($needle)) {
-    $res = $client->getInvoice((int)$needle, 'contact');
-    $obj = $res['objects'] ?? $res;
-    if (is_array($obj) && isset($obj[0])) {
-        $obj = $obj[0];
-    }
-    if (is_array($obj) && (int)($obj['id'] ?? 0) > 0) {
-        $target = $obj;
-    }
-}
-if ($target === null) {
-    $limit = 200;
-    $offset = 0;
-    for ($page = 0; $page < 30; $page++) {
-        $res = $client->getInvoices($limit, $offset, 'contact');
-        $objs = $res['objects'] ?? [];
-        if (!is_array($objs) || empty($objs)) {
-            break;
-        }
-        foreach ($objs as $inv) {
-            if (is_array($inv) && (string)($inv['invoiceNumber'] ?? '') === $needle) {
-                $target = $inv;
-                break 2;
-            }
-        }
-        if (count($objs) < $limit) {
-            break;
-        }
-        $offset += $limit;
-    }
-}
-
-if ($target === null) {
+if (!$d['found']) {
     fwrite(STDERR, "Rechnung '" . $needle . "' wurde in sevdesk nicht gefunden.\n");
     exit(1);
 }
 
-$invoiceId = (int)$target['id'];
+$inv = $d['invoice'];
 echo "=== Rechnung ===\n";
-echo 'ID:           ' . $invoiceId . "\n";
-echo 'Nummer:       ' . (string)($target['invoiceNumber'] ?? '') . "\n";
-echo 'invoiceType:  ' . (string)($target['invoiceType'] ?? '') . "\n";
-echo 'status:       ' . (string)($target['status'] ?? '') . "\n";
-echo 'payDate:      ' . var_export($target['payDate'] ?? null, true) . "\n";
-echo 'sumGross:     ' . var_export($target['sumGross'] ?? null, true) . "\n";
-echo 'Betrag (svc): ' . InkassoService::invoiceAmount($target) . "\n";
-echo 'dueDate:      ' . InkassoService::dueDateOf($target) . "\n";
+echo 'ID:           ' . (int)$inv['id'] . "\n";
+echo 'Nummer:       ' . (string)$inv['invoiceNumber'] . "\n";
+echo 'invoiceType:  ' . (string)$inv['invoiceType'] . "\n";
+echo 'status:       ' . (string)$inv['status'] . "  (200 = offen, 1000 = bezahlt)\n";
+echo 'payDate:      ' . var_export($inv['payDate'], true) . "\n";
+echo 'Betrag:       ' . $inv['amount'] . "\n";
+echo 'dueDate:      ' . (string)$inv['dueDate'] . "\n";
 
-// 2. Alle Stornorechnungen laden und nach Verknüpfung zu dieser Rechnung suchen
 echo "\n=== Stornorechnungen (invoiceType=SR) ===\n";
-$matched = [];
-$srTotal = 0;
-$limit = 200;
-$offset = 0;
-for ($page = 0; $page < 20; $page++) {
-    $res = $client->getCancellationInvoices($limit, $offset);
-    $objs = $res['objects'] ?? [];
-    if (!is_array($objs) || empty($objs)) {
-        break;
-    }
-    foreach ($objs as $sr) {
-        if (!is_array($sr)) {
-            continue;
-        }
-        $srTotal++;
-        $origin = $sr['origin'] ?? null;
-        $originId = is_array($origin) ? (int)($origin['id'] ?? 0) : 0;
-        if ($originId === $invoiceId) {
-            $matched[] = $sr;
-        }
-    }
-    if (count($objs) < $limit) {
-        break;
-    }
-    $offset += $limit;
-}
-echo 'SR-Belege gesamt: ' . $srTotal . "\n";
-
-if (!empty($matched)) {
-    echo "TREFFER: " . count($matched) . " Stornorechnung(en) verweisen per origin auf diese Rechnung:\n";
-    foreach ($matched as $sr) {
-        echo '  - SR-ID ' . (int)($sr['id'] ?? 0) . ', Nr. ' . (string)($sr['invoiceNumber'] ?? '-')
-            . ', Datum ' . (string)($sr['invoiceDate'] ?? '-') . "\n";
+echo 'SR-Belege gesamt: ' . (int)$d['sr_total'] . "\n";
+if (!empty($d['matched'])) {
+    echo 'TREFFER: ' . count($d['matched']) . " Stornorechnung(en) verweisen per origin auf diese Rechnung:\n";
+    foreach ($d['matched'] as $m) {
+        echo '  - SR-ID ' . (int)$m['id'] . ', Nr. ' . ((string)$m['invoiceNumber'] ?: '-')
+            . ', Datum ' . ((string)$m['invoiceDate'] ?: '-') . "\n";
     }
 } else {
     echo "KEIN SR-Beleg verweist per 'origin' auf diese Rechnung.\n";
-    echo "Falls die Rechnung dennoch storniert ist, ist die Verknüpfung anders gespeichert.\n";
-    echo "Zur Analyse die Feldnamen einer beliebigen Stornorechnung ausgeben:\n\n";
-    $res = $client->getCancellationInvoices(1, 0);
-    $objs = $res['objects'] ?? [];
-    if (is_array($objs) && isset($objs[0]) && is_array($objs[0])) {
-        echo "Beispiel-SR – verfügbare Felder:\n";
-        foreach ($objs[0] as $k => $v) {
-            $printable = is_scalar($v) || $v === null ? var_export($v, true) : '(' . gettype($v) . ')';
-            echo '  ' . $k . ' = ' . $printable . "\n";
+    if (!empty($d['sample_sr_fields'])) {
+        echo "Falls die Rechnung dennoch storniert ist, ist die Verknüpfung anders gespeichert.\n";
+        echo "Felder einer Beispiel-Stornorechnung:\n";
+        foreach ($d['sample_sr_fields'] as $k => $v) {
+            echo '  ' . $k . ' = ' . var_export($v, true) . "\n";
         }
-    } else {
-        echo "(keine Stornorechnung zum Inspizieren vorhanden)\n";
     }
 }
 
-// 3. Ergebnis der eigentlichen Erkennungslogik
-$service = new DunningService($client);
-$cancelled = $service->cancelledOriginIds();
 echo "\n=== Erkennung durch Mahnautomatik ===\n";
-echo 'Als storniert erkannt: ' . (isset($cancelled[$invoiceId]) ? 'JA (wird nicht mehr gemahnt)' : 'NEIN (würde weiter gemahnt)') . "\n";
+echo 'Als storniert erkannt: ' . ($d['recognized'] ? 'JA (wird nicht mehr gemahnt)' : 'NEIN (würde weiter gemahnt)') . "\n";
 
 exit(0);

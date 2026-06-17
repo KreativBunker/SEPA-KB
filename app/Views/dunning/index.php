@@ -23,6 +23,66 @@
 </div>
 
 <div class="card">
+  <h2>Storno-Prüfung einer Rechnung</h2>
+  <p class="muted">Prüft rein lesend, wie eine Rechnung aktuell in sevdesk vorliegt und ob sie über eine Stornorechnung als erledigt erkannt wird. Nützlich für Rechnungen, die trotz Stornierung weiter gemahnt werden.</p>
+  <form method="post" action="<?php echo \App\Support\App::url('/dunning/diagnose'); ?>">
+    <input type="hidden" name="_csrf" value="<?php echo htmlspecialchars($csrf); ?>">
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
+      <div>
+        <label>Rechnungsnummer oder sevdesk-ID</label>
+        <input name="invoice" value="<?php echo htmlspecialchars((string)($diagnoseInput ?? '')); ?>" placeholder="z.B. RE-2026/252406" required>
+      </div>
+      <button class="btn inline secondary" type="submit">Prüfen</button>
+    </div>
+  </form>
+
+  <?php if (!empty($diagnose) && !empty($diagnose['found'])): $inv = $diagnose['invoice']; ?>
+    <div style="margin-top:14px">
+      <table>
+        <tbody>
+          <tr><th style="text-align:left">sevdesk-ID</th><td><?php echo (int)$inv['id']; ?></td></tr>
+          <tr><th style="text-align:left">Nummer</th><td><?php echo htmlspecialchars((string)$inv['invoiceNumber']); ?></td></tr>
+          <tr><th style="text-align:left">Typ</th><td><?php echo htmlspecialchars((string)$inv['invoiceType']); ?></td></tr>
+          <tr><th style="text-align:left">Status</th><td><?php echo htmlspecialchars((string)$inv['status']); ?> <span class="muted">(200 = offen, 1000 = bezahlt)</span></td></tr>
+          <tr><th style="text-align:left">Bezahlt am</th><td><?php echo $inv['payDate'] ? htmlspecialchars((string)$inv['payDate']) : '<span class="muted">–</span>'; ?></td></tr>
+          <tr><th style="text-align:left">Betrag</th><td><?php echo htmlspecialchars(number_format((float)$inv['amount'], 2, ',', '.')); ?></td></tr>
+          <tr><th style="text-align:left">Fällig</th><td><?php echo htmlspecialchars((string)$inv['dueDate']); ?></td></tr>
+        </tbody>
+      </table>
+
+      <p style="margin-top:12px">
+        <?php if (!empty($diagnose['recognized'])): ?>
+          <span class="pill ok">Als storniert erkannt</span> Diese Rechnung wird nicht (mehr) gemahnt.
+        <?php else: ?>
+          <span class="pill err">Nicht als storniert erkannt</span> Diese Rechnung würde weiter gemahnt.
+        <?php endif; ?>
+      </p>
+
+      <?php if (!empty($diagnose['matched'])): ?>
+        <p class="muted">Zugehörige Stornorechnung(en) (verweisen per <span class="mono">origin</span> auf diese Rechnung):</p>
+        <ul>
+          <?php foreach ($diagnose['matched'] as $m): ?>
+            <li>SR-ID <?php echo (int)$m['id']; ?>, Nr. <?php echo htmlspecialchars((string)$m['invoiceNumber'] ?: '–'); ?>, Datum <?php echo htmlspecialchars((string)$m['invoiceDate'] ?: '–'); ?></li>
+          <?php endforeach; ?>
+        </ul>
+      <?php else: ?>
+        <p class="muted">Geprüfte Stornorechnungen gesamt: <?php echo (int)$diagnose['sr_total']; ?>. Keine davon verweist per <span class="mono">origin</span> auf diese Rechnung.</p>
+        <?php if (!empty($diagnose['sample_sr_fields'])): ?>
+          <details>
+            <summary class="muted" style="cursor:pointer">Felder einer Beispiel-Stornorechnung anzeigen (zur Fehleranalyse)</summary>
+            <pre style="white-space:pre-wrap; font-size:12px; margin:6px 0 0"><?php
+              foreach ($diagnose['sample_sr_fields'] as $k => $v) {
+                  echo htmlspecialchars((string)$k . ' = ' . (is_bool($v) ? var_export($v, true) : (string)$v)) . "\n";
+              }
+            ?></pre>
+          </details>
+        <?php endif; ?>
+      <?php endif; ?>
+    </div>
+  <?php endif; ?>
+</div>
+
+<div class="card">
   <h2>Offene Mahnvorschläge</h2>
   <form method="post" action="<?php echo \App\Support\App::url('/dunning/approve'); ?>">
     <input type="hidden" name="_csrf" value="<?php echo htmlspecialchars($csrf); ?>">
