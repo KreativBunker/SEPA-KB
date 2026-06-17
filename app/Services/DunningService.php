@@ -38,6 +38,9 @@ final class DunningService
     /** @var array<int, ?string> Kontakt-ID => E-Mail (Cache pro Lauf) */
     private array $emailCache = [];
 
+    /** @var array<int, true>|null IDs stornierter Ursprungsrechnungen (Cache pro Lauf) */
+    private ?array $cancelledOriginIds = null;
+
     public function __construct(private SevdeskClient $client)
     {
     }
@@ -109,11 +112,16 @@ final class DunningService
             $offset += $limit;
         }
 
+        // 2b. Stornorechnungen laden – über Stornierung ausgeglichene Rechnungen
+        //     werden nicht (weiter) gemahnt.
+        $cancelled = $this->cancelledOriginIds();
+
         // 3. Filtern: offene, unbezahlte, überfällige Rechnungen
         $today = date('Y-m-d');
         $rows = [];
         foreach ($all as $inv) {
-            if (($inv['invoiceType'] ?? 'RE') === 'MA') {
+            $invoiceType = $inv['invoiceType'] ?? 'RE';
+            if ($invoiceType === 'MA' || $invoiceType === 'SR') {
                 continue;
             }
             if ((int)($inv['status'] ?? 0) !== 200) {
@@ -125,6 +133,11 @@ final class DunningService
 
             $id = (int)($inv['id'] ?? 0);
             if ($id <= 0) {
+                continue;
+            }
+
+            // Über eine Stornorechnung ausgeglichene Rechnung gilt als erledigt
+            if (isset($cancelled[$id])) {
                 continue;
             }
 
@@ -215,6 +228,54 @@ final class DunningService
         });
 
         return $rows;
+    }
+
+    /**
+     * Lädt alle Stornorechnungen (invoiceType=SR) und liefert die Menge der
+     * IDs der stornierten Ursprungsrechnungen. Eine über eine Stornorechnung
+     * ausgeglichene ("quasi bezahlte") Rechnung darf nicht mehr gemahnt werden,
+     * auch wenn sevdesk ihren Status nicht zuverlässig auf "bezahlt" setzt.
+     *
+     * @return array<int, true>
+     */
+    public function cancelledOriginIds(): array
+    {
+        if ($this->cancelledOriginIds !== null) {
+            return $this->cancelledOriginIds;
+        }
+
+        $cancelled = [];
+        $limit = 200;
+        $offset = 0;
+        for ($page = 0; $page < 20; $page++) { // max 4000
+            try {
+                $res = $this->client->getCancellationInvoices($limit, $offset);
+            } catch (\Throwable $e) {
+                // Endpoint nicht verfügbar: ohne Storno-Erkennung fortfahren
+                Logger::error('Mahnwesen: Stornorechnungen konnten nicht geladen werden', $e);
+                break;
+            }
+            $objs = $res['objects'] ?? [];
+            if (!is_array($objs) || empty($objs)) {
+                break;
+            }
+            foreach ($objs as $sr) {
+                if (!is_array($sr) || ($sr['invoiceType'] ?? 'SR') !== 'SR') {
+                    continue;
+                }
+                $origin = $sr['origin'] ?? null;
+                if (is_array($origin) && !empty($origin['id'])) {
+                    $cancelled[(int)$origin['id']] = true;
+                }
+            }
+            if (count($objs) < $limit) {
+                break;
+            }
+            $offset += $limit;
+        }
+
+        $this->cancelledOriginIds = $cancelled;
+        return $cancelled;
     }
 
     /**
@@ -411,6 +472,13 @@ final class DunningService
             if ((int)($invoice['status'] ?? 0) !== 200 || !empty($invoice['payDate'])) {
                 $actionRepo->markSkipped($actionId, 'Rechnung wurde inzwischen bezahlt oder storniert');
                 $log('Übersprungen: Rechnung ' . $label . ' ist inzwischen bezahlt/storniert.');
+                return 'skipped';
+            }
+            // sevdesk setzt den Status einer stornierten Rechnung nicht zuverlässig
+            // auf "bezahlt" – Storno daher zusätzlich über die Stornorechnung erkennen.
+            if (isset($this->cancelledOriginIds()[$invoiceId])) {
+                $actionRepo->markSkipped($actionId, 'Rechnung wurde storniert (Stornorechnung in sevdesk vorhanden)');
+                $log('Übersprungen: Rechnung ' . $label . ' wurde storniert.');
                 return 'skipped';
             }
 
