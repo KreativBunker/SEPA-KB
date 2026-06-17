@@ -539,6 +539,22 @@ final class DunningService
         $mandateRepo = new MandateRepository();
         $actionRepo = new DunningActionRepository();
 
+        // Bestehende Vormerkungen für inzwischen stornierte Rechnungen aufräumen:
+        // Über eine Stornorechnung ausgeglichene Rechnungen werden nicht mehr
+        // versendet, sollen daher auch nicht mehr als offener Vorschlag erscheinen.
+        $cancelled = $this->cancelledOriginIds();
+        if (!empty($cancelled)) {
+            foreach ($actionRepo->findPending() as $pending) {
+                $invId = (int)($pending['sevdesk_invoice_id'] ?? 0);
+                if ($invId > 0 && isset($cancelled[$invId])) {
+                    $actionRepo->markSkipped((int)($pending['id'] ?? 0), 'Rechnung wurde storniert (Stornorechnung in sevdesk vorhanden)');
+                    $counters['skipped']++;
+                    $pLabel = (string)($pending['invoice_number'] ?? '') !== '' ? (string)$pending['invoice_number'] : ('#' . $invId);
+                    $log('Übersprungen: Rechnung ' . $pLabel . ' wurde storniert (Vormerkung entfernt).');
+                }
+            }
+        }
+
         foreach ($rows as $row) {
             $stage = $this->determineNextStage($row, $settings);
             if ($stage === null) {
