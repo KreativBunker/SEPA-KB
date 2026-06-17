@@ -246,6 +246,17 @@ public function getPaymentMethod(int $id, ?string $embed = null): array
         ]);
     }
 
+    public function getCancellationInvoices(int $limit = 200, int $offset = 0): array
+    {
+        // Stornorechnungen sind Invoice-Objekte mit invoiceType=SR, origin verweist auf die stornierte Ursprungsrechnung
+        return $this->request('GET', '/Invoice', [
+            'invoiceType' => 'SR',
+            'limit' => $limit,
+            'offset' => $offset,
+            'embed' => 'origin',
+        ]);
+    }
+
     public function getDunnings(int $invoiceId): array
     {
         return $this->request('GET', '/Invoice/' . $invoiceId . '/getDunnings');
