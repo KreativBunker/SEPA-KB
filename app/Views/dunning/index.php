@@ -86,7 +86,7 @@
 <!-- Weitere Bereiche kompakt: bei Bedarf aufklappen -->
 <details class="card">
   <summary style="cursor:pointer; font-weight:600; font-size:1.1em;">Aktueller Stand aus sevdesk (live)<?php echo !empty($liveOverdue) ? ' – ' . count($liveOverdue) . ' überfällig' : ''; ?></summary>
-  <p class="muted" style="margin-top:10px">Direkt bei jedem Aufruf aus sevdesk geladen: alle offenen, überfälligen Rechnungen mit ihrer aktuellen Mahnstufe. Bezahlte oder stornierte Rechnungen erscheinen hier nicht (mehr). „Jetzt prüfen (Scan)“ oben überführt fällige Rechnungen in die Mahnvorschläge.</p>
+  <p class="muted" style="margin-top:10px">Direkt bei jedem Aufruf aus sevdesk geladen: alle offenen, überfälligen Rechnungen. Die Spalte <strong>Status</strong> zeigt, warum eine Rechnung (noch) kein offener Mahnvorschlag ist – z.&nbsp;B. weil die Karenzzeit bis zur nächsten Mahnstufe noch läuft, sie ausgeschlossen ist (SEPA-Lastschrift, Ratenplan, Ausschlussliste) oder bereits an das Inkasso eskaliert wurde. „Jetzt prüfen (Scan)“ oben überführt die als <em>fällig</em> markierten Rechnungen in die Mahnvorschläge.</p>
   <?php if (!empty($liveError)): ?>
     <p><span class="pill err">Hinweis</span> Der Live-Abruf aus sevdesk ist fehlgeschlagen: <?php echo htmlspecialchars((string)$liveError); ?></p>
   <?php endif; ?>
@@ -100,11 +100,21 @@
           <th>Tage überfällig</th>
           <th>Mahnstufe (sevdesk)</th>
           <th>Forderung</th>
-          <th>Zahlungsart</th>
+          <th>Status</th>
         </tr>
       </thead>
       <tbody>
         <?php foreach (($liveOverdue ?? []) as $ov): ?>
+          <?php
+            $disp = $liveDisposition[(int)($ov['id'] ?? 0)] ?? ['state' => 'due', 'label' => 'Fällig', 'detail' => ''];
+            $pillClass = [
+                'proposal' => 'primary',
+                'due' => 'warn',
+                'waiting' => 'secondary',
+                'excluded' => 'secondary',
+                'escalated' => 'err',
+            ][$disp['state']] ?? 'secondary';
+          ?>
           <tr>
             <td class="nowrap"><?php echo htmlspecialchars((string)$ov['invoiceNumber']); ?></td>
             <td><?php echo htmlspecialchars((string)$ov['contact_name']); ?></td>
@@ -112,7 +122,12 @@
             <td class="nowrap" style="text-align:right;"><?php echo (int)($ov['days_overdue'] ?? 0); ?></td>
             <td class="nowrap"><?php echo (int)($ov['dunning_level'] ?? 0); ?></td>
             <td class="nowrap" style="text-align:right;"><?php echo htmlspecialchars(number_format((float)($ov['total_claim'] ?? 0), 2, ',', '.')); ?> <?php echo htmlspecialchars((string)($ov['currency'] ?? 'EUR')); ?></td>
-            <td><?php echo htmlspecialchars((string)($ov['payment_method'] ?? '')); ?></td>
+            <td>
+              <span class="pill <?php echo $pillClass; ?>"><?php echo htmlspecialchars((string)$disp['label']); ?></span>
+              <?php if (!empty($disp['detail'])): ?>
+                <div class="muted" style="margin-top:4px; white-space:normal"><?php echo htmlspecialchars((string)$disp['detail']); ?></div>
+              <?php endif; ?>
+            </td>
           </tr>
         <?php endforeach; ?>
         <?php if (empty($liveOverdue) && empty($liveError)): ?>

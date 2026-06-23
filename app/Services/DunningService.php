@@ -523,6 +523,83 @@ final class DunningService
     }
 
     /**
+     * Erklärt für jede überfällige Rechnung, warum sie (noch) kein offener
+     * Mahnvorschlag ist – für die Live-Übersicht. Rein lesend, verändert nichts.
+     * Macht den Unterschied zwischen „überfällig" (alle) und „Vorschlag"
+     * (nur fällige, nicht ausgeschlossene Stufen) transparent.
+     *
+     * @param array<int,array<string,mixed>> $rows Ergebnis von loadOverdueInvoices()
+     * @param array<string,mixed> $settings
+     * @return array<int, array{state:string, label:string, detail:string}>
+     */
+    public function explainOverdue(array $rows, array $settings): array
+    {
+        $exclRepo = new DunningExclusionRepository();
+        $exclInvoiceIds = $exclRepo->excludedInvoiceIds();
+        $exclContactIds = $exclRepo->excludedContactIds();
+        $mandateRepo = new MandateRepository();
+
+        // Bereits vorgemerkte Aktionen je Rechnung (Status pending)
+        $pendingByInvoice = [];
+        foreach ((new DunningActionRepository())->findPending() as $p) {
+            $pendingByInvoice[(int)($p['sevdesk_invoice_id'] ?? 0)] = $p;
+        }
+
+        $out = [];
+        foreach ($rows as $row) {
+            $id = (int)($row['id'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+            $level = (int)($row['dunning_level'] ?? 0);
+
+            // 1. Bereits als Vorschlag vorgemerkt
+            if (isset($pendingByInvoice[$id])) {
+                $st = (int)($pendingByInvoice[$id]['stage'] ?? 0);
+                $out[$id] = ['state' => 'proposal', 'label' => 'Im Vorschlag', 'detail' => $this->stageLabel($st)];
+                continue;
+            }
+
+            // 2. Max. Mahnstufe erreicht -> manuelle Inkasso-Übergabe
+            if ($level >= self::MAX_STAGE) {
+                $out[$id] = ['state' => 'escalated', 'label' => 'Eskaliert', 'detail' => 'Max. Mahnstufe erreicht – manuelle Inkasso-Übergabe'];
+                continue;
+            }
+
+            // 3. Ausschlussgrund (Liste, Ratenplan, SEPA-Lastschrift/Mandat)
+            $reason = $this->exclusionReason($row, $settings, $exclInvoiceIds, $exclContactIds, $mandateRepo);
+            if ($reason !== null) {
+                $out[$id] = ['state' => 'excluded', 'label' => 'Ausgeschlossen', 'detail' => $reason];
+                continue;
+            }
+
+            // 4. Nächste Stufe bereits fällig -> wird beim nächsten Scan vorgemerkt
+            $stage = $this->determineNextStage($row, $settings);
+            if ($stage !== null) {
+                $out[$id] = ['state' => 'due', 'label' => 'Fällig', 'detail' => $this->stageLabel($stage) . ' – beim nächsten Scan'];
+                continue;
+            }
+
+            // 5. Noch nicht fällig: Datum berechnen, ab dem die nächste Stufe greift
+            $nextStage = $level + 1;
+            $base = $level === 0
+                ? substr((string)($row['dueDate'] ?? ''), 0, 10)
+                : substr((string)($row['last_dunning_date'] ?? ''), 0, 10);
+            $days = (int)($settings['dunning_days_stage' . $nextStage] ?? 7);
+            $detail = 'Karenzzeit läuft noch';
+            if ($base !== '') {
+                $ts = strtotime($base . ' +' . $days . ' days');
+                if ($ts !== false) {
+                    $detail = $this->stageLabel($nextStage) . ' ab ' . \App\Support\DateFormatter::toDisplay(date('Y-m-d', $ts));
+                }
+            }
+            $out[$id] = ['state' => 'waiting', 'label' => 'Wartet', 'detail' => $detail];
+        }
+
+        return $out;
+    }
+
+    /**
      * Ermittelt alle fälligen Mahnaktionen und stellt sie in die Queue
      * (dunning_actions, Status pending). Bereits vorhandene Stufen werden
      * über den Unique-Key ignoriert.
