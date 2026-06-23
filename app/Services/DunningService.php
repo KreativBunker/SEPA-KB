@@ -62,12 +62,15 @@ final class DunningService
      */
     public function loadOverdueInvoices(): array
     {
-        // 1. Offene Rechnungen paginiert laden
+        // 1. Offene Rechnungen paginiert laden. Serverseitiger Status-Filter
+        //    (200 = offen) reduziert die Datenmenge stark, sodass auch neue
+        //    Rechnungen sicher im Fenster liegen. Hohe Seitenobergrenze nur als
+        //    Schutz – die Schleife endet regulär bei einer unvollen Seite.
         $all = [];
         $limit = 200;
         $offset = 0;
-        for ($page = 0; $page < 20; $page++) { // max 4000
-            $res = $this->client->getInvoices($limit, $offset, 'contact,paymentMethod');
+        for ($page = 0; $page < 500; $page++) { // Schutzlimit (max 100.000)
+            $res = $this->client->getInvoices($limit, $offset, 'contact,paymentMethod', 200);
             $objs = $res['objects'] ?? [];
             if (!is_array($objs) || empty($objs)) {
                 break;
@@ -87,7 +90,7 @@ final class DunningService
         //    gruppieren – vermeidet N+1 API-Calls.
         $dunningsByOrigin = [];
         $offset = 0;
-        for ($page = 0; $page < 20; $page++) {
+        for ($page = 0; $page < 500; $page++) { // Schutzlimit
             $res = $this->client->getDunningInvoices($limit, $offset);
             $objs = $res['objects'] ?? [];
             if (!is_array($objs) || empty($objs)) {
@@ -247,7 +250,7 @@ final class DunningService
         $cancelled = [];
         $limit = 200;
         $offset = 0;
-        for ($page = 0; $page < 20; $page++) { // max 4000
+        for ($page = 0; $page < 500; $page++) { // Schutzlimit
             try {
                 $res = $this->client->getCancellationInvoices($limit, $offset);
             } catch (\Throwable $e) {
@@ -539,20 +542,65 @@ final class DunningService
         $mandateRepo = new MandateRepository();
         $actionRepo = new DunningActionRepository();
 
-        // Bestehende Vormerkungen für inzwischen stornierte Rechnungen aufräumen:
-        // Über eine Stornorechnung ausgeglichene Rechnungen werden nicht mehr
-        // versendet, sollen daher auch nicht mehr als offener Vorschlag erscheinen.
-        $cancelled = $this->cancelledOriginIds();
-        if (!empty($cancelled)) {
-            foreach ($actionRepo->findPending() as $pending) {
-                $invId = (int)($pending['sevdesk_invoice_id'] ?? 0);
-                if ($invId > 0 && isset($cancelled[$invId])) {
-                    $actionRepo->markSkipped((int)($pending['id'] ?? 0), 'Rechnung wurde storniert (Stornorechnung in sevdesk vorhanden)');
-                    $counters['skipped']++;
-                    $pLabel = (string)($pending['invoice_number'] ?? '') !== '' ? (string)$pending['invoice_number'] : ('#' . $invId);
-                    $log('Übersprungen: Rechnung ' . $pLabel . ' wurde storniert (Vormerkung entfernt).');
-                }
+        // Menge der aktuell in sevdesk offenen+überfälligen Rechnungs-IDs.
+        // Bereits vorgemerkte Rechnungen, die hier nicht (mehr) auftauchen,
+        // wurden zwischenzeitlich bezahlt, ausgeglichen oder storniert.
+        $liveOpenIds = [];
+        foreach ($rows as $r) {
+            $rid = (int)($r['id'] ?? 0);
+            if ($rid > 0) {
+                $liveOpenIds[$rid] = true;
             }
+        }
+
+        // Bestehende Vormerkungen gegen den aktuellen sevdesk-Stand aufräumen:
+        // - storniert (Stornorechnung vorhanden) oder
+        // - bezahlt/ausgeglichen (nicht mehr offen+überfällig)
+        // werden nicht mehr versendet und sollen nicht weiter als offener
+        // Vorschlag erscheinen.
+        $cancelled = $this->cancelledOriginIds();
+        foreach ($actionRepo->findPending() as $pending) {
+            $invId = (int)($pending['sevdesk_invoice_id'] ?? 0);
+            if ($invId <= 0) {
+                continue;
+            }
+            $pLabel = (string)($pending['invoice_number'] ?? '') !== '' ? (string)$pending['invoice_number'] : ('#' . $invId);
+
+            if (isset($cancelled[$invId])) {
+                $actionRepo->markSkipped((int)($pending['id'] ?? 0), 'Rechnung wurde storniert (Stornorechnung in sevdesk vorhanden)');
+                $counters['skipped']++;
+                $log('Übersprungen: Rechnung ' . $pLabel . ' wurde storniert (Vormerkung entfernt).');
+                continue;
+            }
+
+            // Noch offen+überfällig laut Live-Abruf? Dann nichts tun.
+            if (isset($liveOpenIds[$invId])) {
+                continue;
+            }
+
+            // Nicht im Live-Set: gezielt re-checken, um Fehlskips durch das
+            // Paginierungsfenster auszuschließen, bevor wir bereinigen.
+            try {
+                $invoice = $this->unwrap($this->client->getInvoice($invId, 'contact'));
+            } catch (\Throwable $e) {
+                // Re-Check fehlgeschlagen: Vormerkung vorsichtshalber behalten.
+                Logger::error('Mahnwesen: Re-Check der Rechnung ' . $invId . ' fehlgeschlagen', $e);
+                continue;
+            }
+            if (!is_array($invoice) || (int)($invoice['id'] ?? 0) <= 0) {
+                $actionRepo->markSkipped((int)($pending['id'] ?? 0), 'Rechnung in sevdesk nicht mehr gefunden');
+                $counters['skipped']++;
+                $log('Übersprungen: Rechnung ' . $pLabel . ' in sevdesk nicht mehr gefunden (Vormerkung entfernt).');
+                continue;
+            }
+            if ((int)($invoice['status'] ?? 0) !== 200 || !empty($invoice['payDate'])) {
+                $actionRepo->markSkipped((int)($pending['id'] ?? 0), 'Rechnung wurde inzwischen bezahlt/ausgeglichen');
+                $counters['skipped']++;
+                $log('Übersprungen: Rechnung ' . $pLabel . ' ist inzwischen bezahlt/ausgeglichen (Vormerkung entfernt).');
+                continue;
+            }
+            // Status offen, aber nicht im Live-Set (z.B. Fälligkeit/Stufe nicht
+            // mehr passend): Vormerkung unverändert lassen.
         }
 
         foreach ($rows as $row) {
@@ -572,7 +620,7 @@ final class DunningService
 
             $email = $this->resolveContactEmail((int)($row['contact_id'] ?? 0));
 
-            $inserted = $actionRepo->insertPending([
+            $result = $actionRepo->insertPending([
                 'sevdesk_invoice_id' => (int)$row['id'],
                 'invoice_number' => (string)$row['invoiceNumber'],
                 'sevdesk_contact_id' => $row['contact_id'],
@@ -584,10 +632,12 @@ final class DunningService
                 'recipient_email' => $email,
             ]);
 
-            if ($inserted) {
+            if ($result === 'inserted') {
                 $counters['queued']++;
                 $log('Vorgemerkt: ' . $this->stageLabel($stage) . ' für Rechnung ' . $label
                     . ($email === null ? ' (Achtung: keine E-Mail am Kontakt)' : ''));
+            } elseif ($result === 'updated') {
+                $log('Aktualisiert: Vorschlag für Rechnung ' . $label . ' an aktuellen sevdesk-Stand angepasst.');
             }
         }
 

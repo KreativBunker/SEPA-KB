@@ -23,6 +23,45 @@
 </div>
 
 <div class="card">
+  <h2>Aktueller Stand aus sevdesk (live)</h2>
+  <p class="muted">Direkt bei jedem Aufruf aus sevdesk geladen: alle offenen, überfälligen Rechnungen mit ihrer aktuellen Mahnstufe. Bezahlte oder stornierte Rechnungen erscheinen hier nicht (mehr). „Jetzt prüfen (Scan)“ oben überführt fällige Rechnungen in die Mahnvorschläge.</p>
+  <?php if (!empty($liveError)): ?>
+    <p><span class="pill err">Hinweis</span> Der Live-Abruf aus sevdesk ist fehlgeschlagen: <?php echo htmlspecialchars((string)$liveError); ?></p>
+  <?php endif; ?>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Nummer</th>
+          <th>Kunde</th>
+          <th>Fällig</th>
+          <th>Tage überfällig</th>
+          <th>Mahnstufe (sevdesk)</th>
+          <th>Forderung</th>
+          <th>Zahlungsart</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach (($liveOverdue ?? []) as $ov): ?>
+          <tr>
+            <td class="nowrap"><?php echo htmlspecialchars((string)$ov['invoiceNumber']); ?></td>
+            <td><?php echo htmlspecialchars((string)$ov['contact_name']); ?></td>
+            <td class="nowrap"><?php echo htmlspecialchars(\App\Support\DateFormatter::toDisplay((string)($ov['dueDate'] ?? ''))); ?></td>
+            <td class="nowrap" style="text-align:right;"><?php echo (int)($ov['days_overdue'] ?? 0); ?></td>
+            <td class="nowrap"><?php echo (int)($ov['dunning_level'] ?? 0); ?></td>
+            <td class="nowrap" style="text-align:right;"><?php echo htmlspecialchars(number_format((float)($ov['total_claim'] ?? 0), 2, ',', '.')); ?> <?php echo htmlspecialchars((string)($ov['currency'] ?? 'EUR')); ?></td>
+            <td><?php echo htmlspecialchars((string)($ov['payment_method'] ?? '')); ?></td>
+          </tr>
+        <?php endforeach; ?>
+        <?php if (empty($liveOverdue) && empty($liveError)): ?>
+          <tr><td colspan="7" class="muted">Aktuell keine offenen, überfälligen Rechnungen in sevdesk.</td></tr>
+        <?php endif; ?>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
   <h2>Storno-Prüfung einer Rechnung</h2>
   <p class="muted">Prüft rein lesend, wie eine Rechnung aktuell in sevdesk vorliegt und ob sie über eine Stornorechnung als erledigt erkannt wird. Nützlich für Rechnungen, die trotz Stornierung weiter gemahnt werden.</p>
   <form method="post" action="<?php echo \App\Support\App::url('/dunning/diagnose'); ?>">

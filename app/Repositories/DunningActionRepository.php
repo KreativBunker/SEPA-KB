@@ -36,16 +36,30 @@ final class DunningActionRepository
     }
 
     /**
-     * Legt eine offene Mahnaktion an. Liefert false, wenn für die Rechnung
-     * bereits eine Aktion derselben Stufe existiert (Idempotenz via Unique-Key).
+     * Legt eine offene Mahnaktion an bzw. aktualisiert eine bereits
+     * vorgemerkte (status='pending') Aktion derselben Stufe mit dem aktuellen
+     * sevdesk-Stand (Betrag, Fälligkeit, Kontakt, E-Mail). Bereits versendete
+     * oder übersprungene Einträge bleiben unangetastet.
+     *
+     * @return string 'inserted' = neu vorgemerkt, 'updated' = Snapshot
+     *                aktualisiert, 'unchanged' = nichts geändert (z.B. bereits
+     *                versendet/übersprungen oder Werte identisch).
      */
-    public function insertPending(array $data): bool
+    public function insertPending(array $data): string
     {
         $this->ensureTable();
         $pdo = Db::pdo();
-        $st = $pdo->prepare('INSERT IGNORE INTO dunning_actions
+        $st = $pdo->prepare('INSERT INTO dunning_actions
             (sevdesk_invoice_id, invoice_number, sevdesk_contact_id, contact_name, stage, amount, currency, due_date, recipient_email)
-            VALUES (:sevdesk_invoice_id, :invoice_number, :sevdesk_contact_id, :contact_name, :stage, :amount, :currency, :due_date, :recipient_email)');
+            VALUES (:sevdesk_invoice_id, :invoice_number, :sevdesk_contact_id, :contact_name, :stage, :amount, :currency, :due_date, :recipient_email)
+            ON DUPLICATE KEY UPDATE
+                invoice_number     = IF(status = \'pending\', VALUES(invoice_number), invoice_number),
+                contact_name       = IF(status = \'pending\', VALUES(contact_name), contact_name),
+                sevdesk_contact_id = IF(status = \'pending\', VALUES(sevdesk_contact_id), sevdesk_contact_id),
+                amount             = IF(status = \'pending\', VALUES(amount), amount),
+                currency           = IF(status = \'pending\', VALUES(currency), currency),
+                due_date           = IF(status = \'pending\', VALUES(due_date), due_date),
+                recipient_email    = IF(status = \'pending\' AND VALUES(recipient_email) IS NOT NULL, VALUES(recipient_email), recipient_email)');
         $st->execute([
             'sevdesk_invoice_id' => (int)($data['sevdesk_invoice_id'] ?? 0),
             'invoice_number' => (string)($data['invoice_number'] ?? ''),
@@ -57,7 +71,16 @@ final class DunningActionRepository
             'due_date' => $data['due_date'] ?? null,
             'recipient_email' => $data['recipient_email'] ?? null,
         ]);
-        return $st->rowCount() > 0;
+        // MySQL liefert für INSERT ... ON DUPLICATE KEY UPDATE:
+        // 1 = neu eingefügt, 2 = bestehende Zeile aktualisiert, 0 = keine Änderung.
+        $affected = $st->rowCount();
+        if ($affected === 1) {
+            return 'inserted';
+        }
+        if ($affected >= 2) {
+            return 'updated';
+        }
+        return 'unchanged';
     }
 
     public function find(int $id): ?array
