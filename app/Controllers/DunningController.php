@@ -63,9 +63,11 @@ final class DunningController
         // Fehler werden abgefangen, damit die Seite auch ohne sevdesk-Verbindung
         // bedienbar bleibt.
         $liveOverdue = [];
+        $liveDisposition = [];
         $liveError = null;
         try {
             $liveOverdue = $service->loadOverdueInvoices();
+            $liveDisposition = $service->explainOverdue($liveOverdue, $settings);
         } catch (\Throwable $e) {
             Logger::error('Mahnwesen: Live-Abruf des Ist-Stands fehlgeschlagen', $e);
             $liveError = $e->getMessage();
@@ -78,6 +80,7 @@ final class DunningController
             'exclusions' => (new DunningExclusionRepository())->all(),
             'runs' => (new DunningRunRepository())->recent(10),
             'liveOverdue' => $liveOverdue,
+            'liveDisposition' => $liveDisposition,
             'liveError' => $liveError,
             'service' => $service,
             'dunningEnabled' => !empty($settings['dunning_enabled']),
