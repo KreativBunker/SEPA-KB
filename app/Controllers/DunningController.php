@@ -59,12 +59,26 @@ final class DunningController
         $settings = (new SettingsRepository())->get();
         $service = $this->service();
 
+        // Aktueller Ist-Stand live aus sevdesk (offene, überfällige Rechnungen).
+        // Fehler werden abgefangen, damit die Seite auch ohne sevdesk-Verbindung
+        // bedienbar bleibt.
+        $liveOverdue = [];
+        $liveError = null;
+        try {
+            $liveOverdue = $service->loadOverdueInvoices();
+        } catch (\Throwable $e) {
+            Logger::error('Mahnwesen: Live-Abruf des Ist-Stands fehlgeschlagen', $e);
+            $liveError = $e->getMessage();
+        }
+
         View::render('dunning/index', array_merge([
             'csrf' => Csrf::token(),
             'pending' => (new DunningActionRepository())->findPending(),
             'history' => (new DunningActionRepository())->recent(100),
             'exclusions' => (new DunningExclusionRepository())->all(),
             'runs' => (new DunningRunRepository())->recent(10),
+            'liveOverdue' => $liveOverdue,
+            'liveError' => $liveError,
             'service' => $service,
             'dunningEnabled' => !empty($settings['dunning_enabled']),
             'dunningMode' => (($settings['dunning_mode'] ?? 'review') === 'auto') ? 'auto' : 'review',

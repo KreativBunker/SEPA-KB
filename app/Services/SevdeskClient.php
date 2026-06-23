@@ -142,11 +142,17 @@ curl_setopt_array($ch, [
         return $this->request('GET', '/Contact', ['limit' => 1]);
     }
 
-    public function getInvoices(int $limit = 100, int $offset = 0, ?string $embed = 'contact'): array
+    public function getInvoices(int $limit = 100, int $offset = 0, ?string $embed = 'contact', ?int $status = null): array
     {
         $q = ['limit' => $limit, 'offset' => $offset];
         if ($embed) {
             $q['embed'] = $embed;
+        }
+        // Optionaler serverseitiger Status-Filter (z.B. 200 = offen). Reduziert
+        // die Datenmenge erheblich; wird von sevdesk ignoriert, falls nicht
+        // unterstützt – der clientseitige Filter bleibt das Sicherheitsnetz.
+        if ($status !== null) {
+            $q['status'] = $status;
         }
         return $this->request('GET', '/Invoice', $q);
     }
